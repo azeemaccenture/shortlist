@@ -1,6 +1,6 @@
 import type { ClientId } from "../data/clients";
 import type { PersonaId } from "../data/clientNotes";
-import { REQUIREMENT_COPY } from "../data/requirementSources";
+import { REQUIREMENT_COPY, type Extract } from "../data/requirementSources";
 
 const KEY = "shortlist.requirementSources";
 const EVENT = "shortlist-requirements";
@@ -9,6 +9,7 @@ export type StoredSource = {
   name: string;
   meta: string;
   text: string;
+  extracts?: Extract[];
 };
 
 export type PersonaSources = {
@@ -52,17 +53,21 @@ export function connectJira(clientId: ClientId, persona: PersonaId) {
   writeAll(store);
 }
 
-export function attachDocument(clientId: ClientId, persona: PersonaId, fileName: string) {
+export function attachDocument(clientId: ClientId, persona: PersonaId, fileName: string, fileMeta?: string) {
   const template = REQUIREMENT_COPY[clientId][persona].document;
   const store = readAll();
   const client = store[clientId] ?? {};
   const current = client[persona] ?? {};
+  const meta = fileMeta
+    ? `${fileMeta} · ${template.extracts.length} items extracted`
+    : `Just uploaded · ${template.extracts.length} items extracted`;
   client[persona] = {
     ...current,
     document: {
       name: fileName || template.name,
-      meta: template.meta,
-      text: `${template.text} ${fileName}`.trim(),
+      meta,
+      text: template.text,
+      extracts: template.extracts,
     },
   };
   store[clientId] = client;

@@ -1648,6 +1648,75 @@ ol.note-list, ul.note-list { list-style: none; margin: 0; padding: 0; }
 .rp-clear:hover { color: var(--rp-danger); }
 .rp-applied { margin-top: 10px; font-size: 12px; color: var(--rp-green-text); }
 .rp-file { display: none; }
+.rp-extracts { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 7px; }
+.rp-extracts.bare { padding: 0; gap: 8px; }
+.rp-extract { display: flex; align-items: flex-start; gap: 8px; }
+.rp-tag {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0; margin-top: 1px;
+}
+.rp-tag.obj { background: #edf5ff; color: #0f62fe; border: 1px solid #a6c8ff; }
+.rp-tag.risk { background: #fdf6dd; color: #8b6000; border: 1px solid #f1c21b; }
+.rp-tag.commit { background: #f6f2ff; color: #6929c4; border: 1px solid #d4bbff; }
+.rp-extract > span:last-child { font-size: 12px; color: #525252; line-height: 1.4; }
+.rp-modal {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(22, 22, 22, 0.6);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.rp-modal-box {
+  background: #fff; color: #161616; border-radius: 4px; width: 100%; max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18); overflow: hidden;
+}
+.rp-modal-head, .rp-modal-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid #e0e0e0;
+}
+.rp-modal-foot { border-bottom: none; border-top: 1px solid #e0e0e0; padding: 14px 20px; }
+.rp-modal-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: #161616; }
+.rp-modal-title svg { width: 18px; height: 18px; color: #525252; }
+.rp-modal-close { font-size: 20px; line-height: 1; color: #8d8d8d; background: none; padding: 2px; }
+.rp-modal-close:hover { color: #161616; }
+.rp-modal-body { padding: 20px; }
+.rp-modal-sub { font-size: 12px; color: #8d8d8d; }
+.rp-modal-label { font-size: 12px; font-weight: 600; color: #525252; margin: 14px 0 8px; }
+.rp-modal-back { font-size: 13px; color: #525252; background: none; padding: 0; }
+.rp-modal-back:hover { color: #161616; }
+.rp-modal-primary {
+  font-size: 13px; font-weight: 600; padding: 8px 18px; background: #0f62fe; color: #fff; border-radius: 4px;
+}
+.rp-modal-primary:hover { background: #0043ce; }
+.rp-modal-primary:disabled { opacity: 0.4; pointer-events: none; }
+.rp-oauth { text-align: center; padding: 20px 0 8px; color: #525252; }
+.rp-oauth svg { width: 40px; height: 40px; color: #0052cc; display: block; margin: 0 auto 12px; }
+.rp-oauth p { font-size: 13px; line-height: 1.5; }
+.rp-bar { height: 4px; background: #e0e0e0; border-radius: 2px; margin-top: 16px; overflow: hidden; }
+.rp-bar > span { display: block; height: 100%; background: #0052cc; transition: width 0.4s ease; }
+.rp-drop {
+  width: 100%; border: 2px dashed #c6c6c6; border-radius: 4px; padding: 32px 20px;
+  text-align: center; background: #f4f4f4; color: #161616;
+}
+.rp-drop:hover { border-color: #0f62fe; background: #edf5ff; }
+.rp-drop svg { width: 32px; height: 32px; color: #8d8d8d; display: block; margin: 0 auto 10px; }
+.rp-drop-label { font-size: 14px; font-weight: 500; }
+.rp-drop-sub { font-size: 12px; color: #8d8d8d; margin-top: 4px; }
+.rp-file-list { display: flex; flex-direction: column; gap: 6px; }
+.rp-file-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 14px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; text-align: left;
+}
+.rp-file-row svg { width: 18px; height: 18px; color: #da1e28; flex-shrink: 0; }
+.rp-file-row.selected, .rp-file-row:hover { border-color: #0f62fe; background: #edf5ff; }
+.rp-fname { font-size: 13px; font-weight: 500; color: #161616; flex: 1; min-width: 0; }
+.rp-fmeta { font-size: 11px; color: #8d8d8d; font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.rp-parse { display: flex; flex-direction: column; gap: 8px; }
+.rp-step { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #525252; }
+.rp-step svg { width: 14px; height: 14px; flex-shrink: 0; }
+.rp-step.done { color: #8d8d8d; }
+.rp-step.done svg { color: #0e6027; }
+.rp-step.active svg { color: #0f62fe; animation: spin 0.7s linear infinite; }
+.rp-preview-file { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.rp-preview-file .rp-badge { margin-left: auto; }
 @media (max-width: 720px) {
   .rp-card-head { flex-wrap: wrap; }
   .rp-footer { flex-wrap: wrap; }

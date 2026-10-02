@@ -34,7 +34,8 @@ describe("requirement sources", () => {
     removeSource("hexworth", "ba", "jira");
 
     expect(readSources("hexworth", "ba").jira).toBeUndefined();
-    expect(requirementText("hexworth", "ba")).toContain("playback");
+    expect(requirementText("hexworth", "ba")).toContain("Playback");
+    expect(readSources("hexworth", "ba").document?.extracts?.length).toBeGreaterThan(0);
 
     clearSources("hexworth", "ba");
     expect(requirementText("hexworth", "ba")).toBe("");
