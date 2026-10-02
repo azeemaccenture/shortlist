@@ -4,14 +4,16 @@ import { RequirementsPanel } from "../components/RequirementsPanel";
 import { ShortlistLogo } from "../components/ShortlistLogo";
 import { CLIENTS, type ClientId } from "../data/clients";
 import {
-  FETCH_STEPS,
-  MOCK_FETCH,
   MOCK_SENTIMENT,
   MOCK_TRENDS,
-  SCRAPE_SOURCES,
-  type ScrapeSource,
   type UpdateCard,
 } from "../data/intelMock";
+import {
+  SALESFORCE_FETCH_STEPS,
+  SALESFORCE_RELEASE_NOTES,
+  SALESFORCE_SEED_HEADLINES,
+  SALESFORCE_SHIPPED,
+} from "../data/salesforceReleaseNotes";
 import { notesFor } from "../data/clientNotes";
 import { clientHref } from "../portal/useClient";
 
@@ -30,40 +32,12 @@ const CARD_COPY: Record<ClientId, { description: string; pills: string[] }> = {
   },
 };
 
-const SEEDED_UPDATES: UpdateCard[] = [
-  {
-    id: "seed-aether-5g",
-    type: "platform",
-    date: "28 Sep 2026",
-    title: "Multi-year 5G orchestration platform",
-    description: "Unified service graph across radio, core, edge, and partner networks. Foundation for resilient growth.",
-    client: "aether",
-  },
-  {
-    id: "seed-hex-entitlements",
-    type: "product",
-    date: "29 Sep 2026",
-    title: "Streaming entitlements API v2.4",
-    description: "Flexible content-package access and entitlement-preview endpoints for content partners.",
-    client: "hexworth",
-  },
-  {
-    id: "seed-hex-hub",
-    type: "security",
-    date: "27 Sep 2026",
-    title: "Partner hub — signed payloads",
-    description: "Exponential backoff, dead-letter queue, and signed payloads for content and entitlement events.",
-    client: "hexworth",
-  },
-];
-
 function seedHeadlines(): UpdateCard[] {
-  return SEEDED_UPDATES;
+  return SALESFORCE_SEED_HEADLINES;
 }
 
 export function AgencyPage() {
   const navigate = useNavigate();
-  const [source, setSource] = useState<ScrapeSource>("saas");
   const [tab, setTab] = useState<"update" | "trends" | "sentiment">("update");
   const [cards, setCards] = useState<UpdateCard[]>(() => seedHeadlines());
   const [fetching, setFetching] = useState(false);
@@ -93,13 +67,13 @@ export function AgencyPage() {
     setTab("update");
     setFetching(true);
     setFetchStep(0);
-    FETCH_STEPS.forEach((_, index) => {
+    SALESFORCE_FETCH_STEPS.forEach((_, index) => {
       later(() => setFetchStep(index), index * 280);
     });
     later(() => {
-      setCards(MOCK_FETCH[source]);
+      setCards(SALESFORCE_SHIPPED);
       setFetching(false);
-    }, FETCH_STEPS.length * 280);
+    }, SALESFORCE_FETCH_STEPS.length * 280);
   }
 
   function fetchTrends() {
@@ -135,18 +109,18 @@ export function AgencyPage() {
             <ShortlistLogo animate />
           </Link>
           <div className="ag-spacer" />
-          <select
+          <a
             className="ag-source"
-            aria-label="Changelog source"
-            value={source}
-            onChange={(event) => setSource(event.target.value as ScrapeSource)}
+            href={SALESFORCE_RELEASE_NOTES.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Release notes source: ${SALESFORCE_RELEASE_NOTES.label}, release ${SALESFORCE_RELEASE_NOTES.release}`}
+            title={SALESFORCE_RELEASE_NOTES.sourceUrl}
+            data-testid="release-source"
           >
-            {SCRAPE_SOURCES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <span className="ag-source-dot" aria-hidden="true" />
+            Source · {SALESFORCE_RELEASE_NOTES.releaseLabel} · release {SALESFORCE_RELEASE_NOTES.release}
+          </a>
           <button className={fetching ? "ag-scrape-btn fetching" : "ag-scrape-btn"} type="button" onClick={fetchNotes}>
             <span className="spin">↻</span> <span>{fetching ? "Fetching…" : "Fetch latest notes"}</span>
           </button>
@@ -206,11 +180,23 @@ export function AgencyPage() {
           </div>
 
           <div className={tab === "update" ? "ag-intel-panel active" : "ag-intel-panel"}>
+            <div className="ag-intel-source" data-testid="release-source-citation">
+              <span className="ag-intel-source-label">Source</span>
+              <a
+                className="ag-intel-source-link"
+                href={SALESFORCE_RELEASE_NOTES.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {SALESFORCE_RELEASE_NOTES.label} · release {SALESFORCE_RELEASE_NOTES.release} ({SALESFORCE_RELEASE_NOTES.releaseLabel})
+              </a>
+              <span className="ag-intel-source-meta">{SALESFORCE_RELEASE_NOTES.sourceName}</span>
+            </div>
             <div className={fetching ? "fetch-status show" : "fetch-status"}>
               <div className="fetch-dot" />
-              <span className="fetch-status-text">{FETCH_STEPS[fetchStep]}</span>
+              <span className="fetch-status-text">{SALESFORCE_FETCH_STEPS[fetchStep]}</span>
               <span className="fetch-status-step">
-                {fetchStep + 1} / {FETCH_STEPS.length}
+                {fetchStep + 1} / {SALESFORCE_FETCH_STEPS.length}
               </span>
             </div>
             <div className="ag-intel-cards" data-testid="release-headlines">
