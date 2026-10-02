@@ -1,21 +1,23 @@
 import { Link } from "react-router-dom";
+import { ClientShell } from "../components/ClientShell";
 import { ContextSummary } from "../components/ContextSummary";
-import { WorkspaceLayout } from "../components/Layout";
 import { CATALOG } from "../data/catalog";
 import { formatScore } from "../format";
 import { rankTop } from "../scoring/rank";
+import { useClientBase } from "../portal/useClient";
 import { useSession } from "../state/SessionProvider";
 import { ROLE_LABELS, ROLE_WEIGHT_PROFILE } from "../types";
 
 export function ShortlistPage() {
   const { context } = useSession();
+  const base = useClientBase();
   if (!context) return null;
   const ranked = rankTop(context, CATALOG);
   const top = ranked[0];
   const profile = ROLE_WEIGHT_PROFILE[context.role];
 
   return (
-    <WorkspaceLayout>
+    <ClientShell>
       <section className="ae-data" aria-label="Shortlist snapshot">
         <div className="ae-data-in">
           <div className="ae-data-lead">
@@ -37,10 +39,10 @@ export function ShortlistPage() {
       <div className="ae-main">
         <nav className="ae-filters" aria-label="View">
           <p className="ae-filters-label">View</p>
-          <Link to="/catalog">
+          <Link to={`${base}/catalog`}>
             All features <span className="cnt">{CATALOG.length}</span>
           </Link>
-          <Link to="/shortlist" className="is-on">
+          <Link to={`${base}/shortlist`} className="is-on">
             Top 5 <span className="cnt">{ranked.length}</span>
           </Link>
         </nav>
@@ -51,7 +53,7 @@ export function ShortlistPage() {
           <ol className="ae-list" data-testid="shortlist">
             {ranked.map((row, index) => (
               <li key={row.item.id} data-testid="shortlist-row">
-                <Link className="ae-row" to={`/items/${row.item.id}`}>
+                <Link className="ae-row" to={`${base}/items/${row.item.id}`}>
                   <div className="ae-row-tier rank">{index + 1}</div>
                   <div className="ae-row-main">
                     <h3>{row.item.name}</h3>
@@ -74,6 +76,6 @@ export function ShortlistPage() {
           </ol>
         </div>
       </div>
-    </WorkspaceLayout>
+    </ClientShell>
   );
 }

@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { AgencyLayout } from "../components/Layout";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { ClientShell } from "../components/ClientShell";
 import { CATALOG } from "../data/catalog";
 import { formatWhen } from "../format";
 import { nonEmptyLines, parsePriorityLine, parseUpload, type ParsedBrief } from "../intake/parseUpload";
 import { SAMPLE_BRIEF, SAMPLE_FILE_NAME } from "../intake/sampleBrief";
 import { VA_PROMPTS, VA_TURN_COUNT } from "../intake/vaScript";
 import { briefError, intakeError, priorityError } from "../intake/validate";
+import { useClient } from "../portal/useClient";
 import { useSession } from "../state/SessionProvider";
 import type { Priority, Role } from "../types";
 import { ROLE_LABELS, ROLES } from "../types";
@@ -60,8 +61,9 @@ function BriefLists({
 
 export function IntakePage() {
   const navigate = useNavigate();
-  const { context, saveContext } = useSession();
-  const [role, setRole] = useState<Role | "">(context?.role ?? "");
+  const client = useClient();
+  const { context, saveContext, pendingRole, setPendingRole, setRole: setSessionRole } = useSession();
+  const [role, setRole] = useState<Role | "">(context?.role ?? pendingRole ?? "");
   const [mode, setMode] = useState<"upload" | "va">("upload");
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
@@ -71,6 +73,18 @@ export function IntakePage() {
   const [vaGoals, setVaGoals] = useState<string[]>([]);
   const [vaConstraints, setVaConstraints] = useState<string[]>([]);
   const [vaPriorities, setVaPriorities] = useState<Priority[]>([]);
+
+  useEffect(() => {
+    if (context?.role) setRole(context.role);
+    else if (pendingRole) setRole(pendingRole);
+  }, [context?.role, pendingRole]);
+
+  function chooseRole(option: Role) {
+    setRole(option);
+    setPendingRole(option);
+    if (context) setSessionRole(option);
+    setError(null);
+  }
 
   function applyUpload(name: string, text: string) {
     const next = parseUpload(text);
@@ -125,7 +139,7 @@ export function IntakePage() {
         upload: { fileName, parsedAt: new Date().toISOString() },
       },
     });
-    navigate("/catalog");
+    navigate(client ? `/clients/${client.id}/catalog` : "/");
   }
 
   function submitVaStep() {
@@ -186,7 +200,7 @@ export function IntakePage() {
         va: { turns: VA_TURN_COUNT, confirmedAt: new Date().toISOString() },
       },
     });
-    navigate("/catalog");
+    navigate(client ? `/clients/${client.id}/catalog` : "/");
   }
 
   const prompt = VA_PROMPTS[vaStep];
@@ -228,8 +242,10 @@ export function IntakePage() {
         { title: "Top 5", body: "Same context and catalog always rank the same way.", when: "Then" },
       ];
 
+  if (!client) return <Navigate to="/" replace />;
+
   return (
-    <AgencyLayout>
+    <ClientShell>
       <section className="ac-hero">
         <p className="ac-hero-eye">FY planning</p>
         <h1>What should this shortlist decide?</h1>
@@ -255,10 +271,7 @@ export function IntakePage() {
                 value={option}
                 checked={role === option}
                 data-testid={`role-${option}`}
-                onChange={() => {
-                  setRole(option);
-                  setError(null);
-                }}
+                onChange={() => chooseRole(option)}
               />
               <span className="ac-qa-name">{ROLE_LABELS[option]}</span>
               <span className="ac-qa-desc">{ROLE_COPY[option]}</span>
@@ -462,6 +475,6 @@ export function IntakePage() {
         ))}
       </ul>
       </main>
-    </AgencyLayout>
+    </ClientShell>
   );
 }

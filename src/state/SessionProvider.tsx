@@ -2,13 +2,27 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { JIRA_BOTTLENECKS } from "../data/jiraMock";
 import { SALESFORCE_RECORDS } from "../data/salesforceMock";
 import { isValidContext } from "../intake/validate";
-import type { ShortlistContext } from "../types";
+import type { Role, ShortlistContext } from "../types";
 
 const STORAGE_KEY = "shortlist.context";
+const PENDING_ROLE_KEY = "shortlist.pendingRole";
+
+function readPendingRole(): Role | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_ROLE_KEY);
+    if (raw === "cio" || raw === "product_lead" || raw === "ba") return raw;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 type SessionValue = {
   context: ShortlistContext | null;
+  pendingRole: Role | null;
   saveContext: (next: ShortlistContext) => void;
+  setRole: (role: Role) => void;
+  setPendingRole: (role: Role) => void;
   syncJira: () => void;
   syncSalesforce: () => void;
 };
@@ -28,6 +42,7 @@ function readStored(): ShortlistContext | null {
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [context, setContext] = useState<ShortlistContext | null>(() => readStored());
+  const [pendingRole, setPendingRoleState] = useState<Role | null>(() => readPendingRole());
 
   const value = useMemo<SessionValue>(() => {
     const persist = (next: ShortlistContext) => {
@@ -37,7 +52,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     return {
       context,
+      pendingRole,
       saveContext: persist,
+      setRole: (role: Role) => {
+        if (!context) return;
+        persist({ ...context, role });
+      },
+      setPendingRole: (role: Role) => {
+        sessionStorage.setItem(PENDING_ROLE_KEY, role);
+        setPendingRoleState(role);
+      },
       syncJira: () => {
         if (!context) return;
         persist({
@@ -65,7 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         });
       },
     };
-  }, [context]);
+  }, [context, pendingRole]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

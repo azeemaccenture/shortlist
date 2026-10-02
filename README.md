@@ -4,10 +4,14 @@ Role-aware shortlist of Salesforce Winter '27 release 264 features. A buyer capt
 
 ## Demo path
 
-1. Intake at `/` — choose CIO, Product Lead, or BA, then upload a brief or finish the assistant.
-2. Catalog at `/catalog` — eight Winter '27 features. Optional mock Jira and Salesforce syncs write into the same context and do not add points.
-3. Top 5 at `/shortlist`.
-4. Detail at `/items/:id` — score breakdown and one next step.
+1. Agency home at `/` — Winter ’27 headlines, deliverables, and the most relevant features for Aether Dynamics and Hexworth.
+2. Open a client portal. The top-right login switches CIO, Product Lead, or BA and rescores the shortlist.
+3. Intake at `/clients/:clientId/intake` — upload a brief or finish the assistant.
+4. Catalog at `/clients/:clientId/catalog` — eight Winter '27 features. Optional mock Jira and Salesforce syncs write into the same context and do not add points.
+5. Top 5 at `/clients/:clientId/shortlist`.
+6. Detail at `/clients/:clientId/items/:id` — score breakdown and one next step.
+
+Release headlines and client-salient lines are a seeded mock. Catalog cards keep their short summaries.
 
 Upload lines use `Goal:`, `Constraint:`, and `Priority: label | weight` (3–5 priorities). Load sample FY brief skips needing a local file.
 

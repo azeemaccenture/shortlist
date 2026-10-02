@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ClientShell } from "../components/ClientShell";
 import { ContextSummary } from "../components/ContextSummary";
-import { WorkspaceLayout } from "../components/Layout";
 import { CATALOG } from "../data/catalog";
 import { formatScore, formatWhen } from "../format";
 import { scoreItem } from "../scoring/rank";
+import { useClientBase } from "../portal/useClient";
 import { useSession } from "../state/SessionProvider";
 import { CLOUDS, ROLE_LABELS, ROLE_WEIGHT_PROFILE, type CatalogItem, type Cloud } from "../types";
 
 export function CatalogPage() {
   const { context, syncJira, syncSalesforce } = useSession();
+  const base = useClientBase();
   const [cloud, setCloud] = useState<Cloud | "all">("all");
   const [query, setQuery] = useState("");
   const visible = useMemo(() => {
@@ -30,7 +32,7 @@ export function CatalogPage() {
   const topScore = Math.max(...CATALOG.map((item) => scoreItem(context, item).score));
 
   return (
-    <WorkspaceLayout>
+    <ClientShell>
       <section className="ae-data" aria-label="Session snapshot">
         <div className="ae-data-in">
           <div className="ae-data-lead">
@@ -127,20 +129,20 @@ export function CatalogPage() {
           ) : (
             <ul className="ae-list" data-testid="catalog-list">
               {visible.map((item) => (
-                <CatalogRow key={item.id} item={item} score={scoreItem(context, item).score} />
+                <CatalogRow key={item.id} item={item} score={scoreItem(context, item).score} base={base} />
               ))}
             </ul>
           )}
         </div>
       </div>
-    </WorkspaceLayout>
+    </ClientShell>
   );
 }
 
-function CatalogRow({ item, score }: { item: CatalogItem; score: number }) {
+function CatalogRow({ item, score, base }: { item: CatalogItem; score: number; base: string }) {
   return (
     <li>
-      <Link className="ae-row catalog-card" to={`/items/${item.id}`}>
+      <Link className="ae-row catalog-card" to={`${base}/items/${item.id}`}>
         <div className="ae-row-tier" title={`Effort band ${item.effortBand}`}>{item.effortBand}</div>
         <div className="ae-row-main">
           <h3>{item.name}</h3>

@@ -1,21 +1,23 @@
 import { Link, useParams } from "react-router-dom";
+import { ClientShell } from "../components/ClientShell";
 import { ContextSummary } from "../components/ContextSummary";
-import { WorkspaceLayout } from "../components/Layout";
 import { CATALOG, findCatalogItem } from "../data/catalog";
 import { formatScore } from "../format";
 import { rankAll, scoreItem } from "../scoring/rank";
+import { useClientBase } from "../portal/useClient";
 import { useSession } from "../state/SessionProvider";
 import { ROLE_WEIGHT_PROFILE } from "../types";
 
 export function DetailPage() {
   const { id } = useParams();
   const { context } = useSession();
+  const base = useClientBase();
   if (!context) return null;
 
   const item = id ? findCatalogItem(id) : undefined;
   if (!item) {
     return (
-      <WorkspaceLayout>
+      <ClientShell>
         <section className="ae-data">
           <div className="ae-data-in">
             <div className="ae-data-lead">
@@ -25,9 +27,9 @@ export function DetailPage() {
           </div>
         </section>
         <div className="ae-band">
-          <Link to="/catalog">Back to catalog</Link>
+          <Link to={`${base}/catalog`}>Back to catalog</Link>
         </div>
-      </WorkspaceLayout>
+      </ClientShell>
     );
   }
 
@@ -37,7 +39,7 @@ export function DetailPage() {
   const load = scored.dimensions.find((dimension) => dimension.id === "changeLoad");
 
   return (
-    <WorkspaceLayout>
+    <ClientShell>
       <section className="ae-data">
         <div className="ae-data-in">
           <div className="ae-data-lead">
@@ -52,15 +54,15 @@ export function DetailPage() {
       </section>
       <div className="ae-band">
         <p className="crumb">
-          <Link to="/shortlist">Top 5</Link> · <Link to="/catalog">Catalog</Link>
+          <Link to={`${base}/shortlist`}>Top 5</Link> · <Link to={`${base}/catalog`}>Catalog</Link>
         </p>
         <ContextSummary context={context} />
       </div>
       <div className="ae-main">
         <nav className="ae-filters" aria-label="View">
           <p className="ae-filters-label">View</p>
-          <Link to="/catalog">Catalog</Link>
-          <Link to="/shortlist">Top 5</Link>
+          <Link to={`${base}/catalog`}>Catalog</Link>
+          <Link to={`${base}/shortlist`}>Top 5</Link>
         </nav>
         <article className="detail-card">
           <div className="ae-expand-grid">
@@ -112,6 +114,6 @@ export function DetailPage() {
           </div>
         </article>
       </div>
-    </WorkspaceLayout>
+    </ClientShell>
   );
 }
