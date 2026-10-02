@@ -17,14 +17,15 @@ beforeEach(() => {
 });
 
 describe("requirement sources", () => {
-  it("stores a mock Jira connection and document per client and persona", () => {
+  it("keeps a sync for every profile on the same client", () => {
     connectJira("aether", "cio");
     attachDocument("aether", "product", "roadmap.pdf");
 
     expect(readSources("aether", "cio").jira?.name).toBe("Jira — STRAT board");
-    expect(readSources("aether", "product").document?.name).toBe("roadmap.pdf");
-    expect(readSources("aether", "cio").document).toBeUndefined();
-    expect(requirementText("aether", "cio")).toContain("strategic");
+    expect(readSources("aether", "product").jira?.name).toBe("Jira — STRAT board");
+    expect(readSources("aether", "ba").document?.name).toBe("roadmap.pdf");
+    expect(requirementText("aether", "ba")).toContain("strategic");
+    expect(requirementText("aether", "cio")).toContain("density");
     expect(requirementText("hexworth", "ba")).toBe("");
   });
 
@@ -34,7 +35,8 @@ describe("requirement sources", () => {
     removeSource("hexworth", "ba", "jira");
 
     expect(readSources("hexworth", "ba").jira).toBeUndefined();
-    expect(requirementText("hexworth", "ba")).toContain("Playback");
+    expect(readSources("hexworth", "cio").document?.name).toBe("hexworth-ops-spec.pdf");
+    expect(requirementText("hexworth", "product")).toContain("Playback");
     expect(readSources("hexworth", "ba").document?.extracts?.length).toBeGreaterThan(0);
 
     clearSources("hexworth", "ba");

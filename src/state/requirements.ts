@@ -17,7 +17,8 @@ export type PersonaSources = {
   jira?: StoredSource;
 };
 
-type Store = Partial<Record<ClientId, Partial<Record<PersonaId, PersonaSources>>>>;
+type LegacyBucket = Partial<Record<PersonaId, PersonaSources>>;
+type Store = Partial<Record<ClientId, PersonaSources | LegacyBucket>>;
 
 function readAll(): Store {
   try {
@@ -36,32 +37,46 @@ function writeAll(store: Store) {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
 }
 
-export function readSources(clientId: ClientId, persona: PersonaId): PersonaSources {
-  return readAll()[clientId]?.[persona] ?? {};
+function isShared(value: PersonaSources | LegacyBucket): value is PersonaSources {
+  return "document" in value || "jira" in value;
+}
+
+/** One sync per client. Older per-profile records are folded together. */
+export function readSources(clientId: ClientId, _persona?: PersonaId): PersonaSources {
+  const raw = readAll()[clientId];
+  if (!raw) return {};
+  if (isShared(raw)) return raw;
+  const merged: PersonaSources = {};
+  for (const sources of Object.values(raw)) {
+    if (!sources) continue;
+    if (sources.jira) merged.jira = sources.jira;
+    if (sources.document) merged.document = sources.document;
+  }
+  return merged;
+}
+
+function writeSources(clientId: ClientId, sources: PersonaSources) {
+  const store = readAll();
+  store[clientId] = sources;
+  writeAll(store);
 }
 
 export function connectJira(clientId: ClientId, persona: PersonaId) {
   const template = REQUIREMENT_COPY[clientId][persona].jira;
-  const store = readAll();
-  const client = store[clientId] ?? {};
-  const current = client[persona] ?? {};
-  client[persona] = {
+  const current = readSources(clientId);
+  writeSources(clientId, {
     ...current,
     jira: { name: template.name, meta: template.meta, text: template.text },
-  };
-  store[clientId] = client;
-  writeAll(store);
+  });
 }
 
 export function attachDocument(clientId: ClientId, persona: PersonaId, fileName: string, fileMeta?: string) {
   const template = REQUIREMENT_COPY[clientId][persona].document;
-  const store = readAll();
-  const client = store[clientId] ?? {};
-  const current = client[persona] ?? {};
+  const current = readSources(clientId);
   const meta = fileMeta
     ? `${fileMeta} · ${template.extracts.length} items extracted`
     : `Just uploaded · ${template.extracts.length} items extracted`;
-  client[persona] = {
+  writeSources(clientId, {
     ...current,
     document: {
       name: fileName || template.name,
@@ -69,29 +84,21 @@ export function attachDocument(clientId: ClientId, persona: PersonaId, fileName:
       text: template.text,
       extracts: template.extracts,
     },
-  };
-  store[clientId] = client;
-  writeAll(store);
+  });
 }
 
-export function removeSource(clientId: ClientId, persona: PersonaId, kind: "document" | "jira") {
-  const store = readAll();
-  const client = store[clientId];
-  const current = client?.[persona];
-  if (!client || !current) return;
+export function removeSource(clientId: ClientId, _persona: PersonaId, kind: "document" | "jira") {
+  const current = readSources(clientId);
+  if (!current[kind]) return;
   const next = { ...current };
   delete next[kind];
-  client[persona] = next;
-  store[clientId] = client;
-  writeAll(store);
+  writeSources(clientId, next);
 }
 
-export function clearSources(clientId: ClientId, persona: PersonaId) {
+export function clearSources(clientId: ClientId, _persona?: PersonaId) {
   const store = readAll();
-  const client = store[clientId];
-  if (!client) return;
-  delete client[persona];
-  store[clientId] = client;
+  if (!store[clientId]) return;
+  delete store[clientId];
   writeAll(store);
 }
 

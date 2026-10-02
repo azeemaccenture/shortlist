@@ -102,7 +102,7 @@ export function RequirementsPanel({ clientId, persona, onPersona, onApply }: Req
   const active = onPersona ? persona : localPersona;
   const copy = REQUIREMENT_COPY[clientId][active];
   const filled = Boolean(sources.document || sources.jira);
-  const summary = summaryFor(active, sources, copy.filledSummary);
+  const summary = summaryFor(sources, copy.filledSummary);
 
   function clearTimers() {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -466,12 +466,12 @@ function ExtractList({ extracts, bare }: { extracts?: Extract[]; bare?: boolean 
   );
 }
 
-function summaryFor(persona: PersonaId, sources: PersonaSources, filledSummary: string) {
+function summaryFor(sources: PersonaSources, filledSummary: string) {
   if (sources.document && sources.jira) {
-    return persona === "cio" ? filledSummary : `${filledSummary} Document included.`;
+    return `2 sources active — ${sources.document.name} and ${sources.jira.name}. Ranking is live.`;
   }
-  if (sources.document) return "1 source active — document parsed. Ranking is ready to apply.";
-  if (persona === "cio") return "1 source active — Jira epics connected. Ranking is ready to apply.";
+  if (sources.document) return `1 source active — ${sources.document.name} parsed. Ranking is ready to apply.`;
+  if (sources.jira) return `1 source active — ${sources.jira.name} connected. Ranking is ready to apply.`;
   return filledSummary;
 }
 
