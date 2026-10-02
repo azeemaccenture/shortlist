@@ -1,11 +1,11 @@
 # Shortlist
 
-Role-aware shortlist for Salesforce-related features. A buyer captures one session context, browses a fixed catalog, and gets a deterministic top 5 with a next step on each pick.
+Role-aware shortlist of Salesforce Winter '27 release 264 features. A buyer captures one session context, browses a fixed catalog, and gets a deterministic top 5 with a v1.1 score and a next step on each pick.
 
 ## Demo path
 
 1. Intake at `/` — choose CIO, Product Lead, or BA, then upload a brief or finish the assistant.
-2. Catalog at `/catalog` — eight seed features. Optional mock Jira and Salesforce syncs write into the same context.
+2. Catalog at `/catalog` — eight Winter '27 features. Optional mock Jira and Salesforce syncs write into the same context and do not add points.
 3. Top 5 at `/shortlist`.
 4. Detail at `/items/:id` — score breakdown and one next step.
 

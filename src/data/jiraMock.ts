@@ -3,22 +3,22 @@ import type { JiraBottleneck } from "../types";
 export const JIRA_BOTTLENECKS: JiraBottleneck[] = [
   {
     id: "BOT-14",
-    summary: "Stale opportunity stages are slipping the forecast",
-    pairedFeature: "Opportunity hygiene",
+    summary: "Forecast calls miss deal risk until the quarter slips",
+    pairedFeature: "Deal-risk pipeline forecasting",
   },
   {
     id: "BOT-22",
-    summary: "Repeat how-to cases are stacking the service backlog",
-    pairedFeature: "Case deflection",
+    summary: "Contact center handoffs still depend on a third-party CCaaS",
+    pairedFeature: "Agentforce Contact Center",
   },
   {
     id: "BOT-31",
-    summary: "Quote approvals are missing the release window",
-    pairedFeature: "CPQ quote path",
+    summary: "Quote cycles miss risk signals before renewal",
+    pairedFeature: "Revenue Management Agent quoting",
   },
   {
     id: "BOT-40",
-    summary: "Duplicate profiles block a single customer view",
-    pairedFeature: "Data Cloud unification",
+    summary: "Governed data jobs cannot be called from the tools teams already use",
+    pairedFeature: "Informatica Headless",
   },
 ];

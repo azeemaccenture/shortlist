@@ -2,15 +2,17 @@ import { Link } from "react-router-dom";
 import { ContextSummary } from "../components/ContextSummary";
 import { WorkspaceLayout } from "../components/Layout";
 import { CATALOG } from "../data/catalog";
+import { formatScore } from "../format";
 import { rankTop } from "../scoring/rank";
 import { useSession } from "../state/SessionProvider";
-import { ROLE_LABELS } from "../types";
+import { ROLE_LABELS, ROLE_WEIGHT_PROFILE } from "../types";
 
 export function ShortlistPage() {
   const { context } = useSession();
   if (!context) return null;
   const ranked = rankTop(context, CATALOG);
   const top = ranked[0];
+  const profile = ROLE_WEIGHT_PROFILE[context.role];
 
   return (
     <WorkspaceLayout>
@@ -18,10 +20,13 @@ export function ShortlistPage() {
         <div className="ae-data-in">
           <div className="ae-data-lead">
             <h1>Top {ranked.length}</h1>
-            <p>Same context and catalog always produce this order. Open a row for the score breakdown and one next step.</p>
+            <p>
+              {ROLE_LABELS[context.role]} uses the {profile} weight profile. The same context and catalog always
+              produce this order.
+            </p>
           </div>
           <div className="ae-stat"><div className="n">{ranked.length}</div><div className="l">Picks</div></div>
-          <div className="ae-stat"><div className="n">{top ? top.score : "—"}</div><div className="l">Top score</div></div>
+          <div className="ae-stat"><div className="n">{top ? formatScore(top.score) : "—"}</div><div className="l">Top score</div></div>
           <div className="ae-stat"><div className="n">{context.priorities.length}</div><div className="l">Priorities</div></div>
           <div className="ae-stat"><div className="n">{ROLE_LABELS[context.role] === "Product Lead" ? "PL" : ROLE_LABELS[context.role]}</div><div className="l">Role</div></div>
         </div>
@@ -51,9 +56,16 @@ export function ShortlistPage() {
                   <div className="ae-row-main">
                     <h3>{row.item.name}</h3>
                     <p className="reason">{row.reason}</p>
+                    {row.sensitiveToWeights ? (
+                      <p className="sensitive" data-testid="weight-sensitive">Sensitive to weight changes.</p>
+                    ) : null}
+                    <div className="ae-row-meta">
+                      <span className="ver">{row.item.cloud}</span>
+                      <span>Effort {row.item.effortBand}</span>
+                    </div>
                   </div>
                   <div className="ae-row-score">
-                    <strong className="score">{row.score}</strong>
+                    <strong className="score">{formatScore(row.score)}</strong>
                     <span>Score</span>
                   </div>
                 </Link>

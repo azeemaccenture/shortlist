@@ -12,9 +12,9 @@ import type { Priority, Role } from "../types";
 import { ROLE_LABELS, ROLES } from "../types";
 
 const ROLE_COPY: Record<Role, string> = {
-  cio: "Lens: platform risk, security, cost, and integration.",
-  product_lead: "Lens: revenue, adoption, roadmap, and release bets.",
-  ba: "Lens: process, requirements, workflow, and data.",
+  cio: "Ops weights: change load, feasibility, and evidence.",
+  product_lead: "Sales weights: strategic fit, evidence, and demand.",
+  ba: "Consolidated weights across the shared and Ops profiles.",
 };
 
 function BriefLists({

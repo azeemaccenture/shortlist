@@ -1,11 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import { ContextSummary } from "../components/ContextSummary";
 import { WorkspaceLayout } from "../components/Layout";
-import { findCatalogItem } from "../data/catalog";
-import { effortLabel } from "../format";
-import { scoreItem } from "../scoring/rank";
+import { CATALOG, findCatalogItem } from "../data/catalog";
+import { formatScore } from "../format";
+import { rankAll, scoreItem } from "../scoring/rank";
 import { useSession } from "../state/SessionProvider";
-import { ROLE_LABELS } from "../types";
+import { ROLE_WEIGHT_PROFILE } from "../types";
 
 export function DetailPage() {
   const { id } = useParams();
@@ -31,7 +31,10 @@ export function DetailPage() {
     );
   }
 
-  const scored = scoreItem(context, item);
+  const ranked = rankAll(context, CATALOG);
+  const scored = ranked.find((row) => row.item.id === item.id) ?? scoreItem(context, item);
+  const fit = scored.dimensions.find((dimension) => dimension.id === "strategicFit");
+  const load = scored.dimensions.find((dimension) => dimension.id === "changeLoad");
 
   return (
     <WorkspaceLayout>
@@ -39,12 +42,12 @@ export function DetailPage() {
         <div className="ae-data-in">
           <div className="ae-data-lead">
             <h1>{item.name}</h1>
-            <p>{item.blurb}</p>
+            <p>{item.cloud}. {item.summary}</p>
           </div>
-          <div className="ae-stat"><div className="n">{scored.score}</div><div className="l">Score</div></div>
-          <div className="ae-stat"><div className="n">{effortLabel(item.effort)}</div><div className="l">Effort</div></div>
-          <div className="ae-stat"><div className="n">{scored.factors.role}</div><div className="l">Role fit</div></div>
-          <div className="ae-stat"><div className="n">{scored.factors.priorities}</div><div className="l">Priorities</div></div>
+          <div className="ae-stat"><div className="n">{formatScore(scored.score)}</div><div className="l">Score</div></div>
+          <div className="ae-stat"><div className="n">{item.effortBand}</div><div className="l">Effort</div></div>
+          <div className="ae-stat"><div className="n">{fit?.score ?? "—"}</div><div className="l">Strategic fit</div></div>
+          <div className="ae-stat"><div className="n">{load?.score ?? "—"}</div><div className="l">Change load</div></div>
         </div>
       </section>
       <div className="ae-band">
@@ -66,42 +69,44 @@ export function DetailPage() {
               <p className="next-step-copy" data-testid="next-step">{scored.nextStep}</p>
               <h2>Scoring inputs</h2>
               <ul className="factor-list">
-                <li>Roles · {item.roles.map((role) => ROLE_LABELS[role]).join(", ")}</li>
-                <li>Themes · {item.themes.join(", ")}</li>
-                <li>Effort · {effortLabel(item.effort)}</li>
-                <li>Attributes · {item.attributes.join(", ")}</li>
+                <li>Cloud · {item.cloud}</li>
+                <li>Themes · {item.strategyTags.join(", ")}</li>
+                <li>Effort · {item.effortBand}</li>
+                <li>Related objects · {item.relatedObjectsUsed}</li>
+                <li>Package installed · {item.packageInstalled ? "yes" : "no"}</li>
+                <li>Usage last 90 days · {item.usageLast90d} (threshold {item.usageThreshold})</li>
+                <li>Admin ready · {item.adminReady ? "yes" : "no"}</li>
+                <li>Demand · {item.demandCount} · {item.urgency} urgency</li>
+                <li>Blocker · {item.blockerFlag ? "yes" : "no"} · dependencies {item.dependencyCount}</li>
+                <li>
+                  Change load · {item.changeLoadBand}
+                  {item.requiresDataMigration ? " · data migration" : ""}
+                  {item.touchesSharedObjects ? " · shared objects" : ""}
+                </li>
+                <li>Weight profile · {ROLE_WEIGHT_PROFILE[context.role]}</li>
+                {scored.bottleneck ? (
+                  <li>
+                    Jira bottleneck · {scored.bottleneck.id} · {scored.bottleneck.summary}
+                  </li>
+                ) : null}
               </ul>
             </div>
             <div>
               <h2>Why it ranked</h2>
-              <p className="reason" data-testid="rank-reason">{scored.reason}</p>
-              <ul className="factor-list">
-                <li>Role · {scored.factors.role} · {ROLE_LABELS[context.role]}</li>
-                <li>
-                  Goals · {scored.factors.goals}
-                  {scored.matchedGoals.length > 0 ? ` · ${scored.matchedGoals.join("; ")}` : " · none matched"}
-                </li>
-                <li>
-                  Constraints · {scored.factors.constraints}
-                  {scored.matchedConstraints.length > 0
-                    ? ` · ${scored.matchedConstraints.join("; ")}`
-                    : " · none matched"}
-                </li>
-                <li>
-                  Priorities · {scored.factors.priorities}
-                  {scored.matchedPriorities.length > 0
-                    ? ` · ${scored.matchedPriorities.map((priority) => `${priority.label} (${priority.points})`).join("; ")}`
-                    : " · none matched"}
-                </li>
-                <li>
-                  Jira ·{" "}
-                  {context.sources.jiraMock
-                    ? scored.bottleneck
-                      ? `${scored.factors.jira} · ${scored.bottleneck.id} ${scored.bottleneck.summary}`
-                      : "0 · synced, no pairing"
-                    : "Not synced"}
-                </li>
-                <li>Salesforce · {context.sources.salesforceMock ? scored.factors.salesforce : "Not synced"}</li>
+              <p className="reason" data-testid="rank-reason">
+                {scored.reason}
+                {scored.contrastClause ? ` ${scored.contrastClause}` : ""}
+              </p>
+              {scored.sensitiveToWeights ? (
+                <p data-testid="weight-sensitive">Sensitive to weight changes.</p>
+              ) : null}
+              <ul className="factor-list" data-testid="dimension-breakdown">
+                {scored.dimensions.map((dimension) => (
+                  <li key={dimension.id}>
+                    {dimension.label} · score {dimension.score} · weight {dimension.weight} · contribution{" "}
+                    {formatScore(dimension.contribution)}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
