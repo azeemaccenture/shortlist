@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { ClientShell } from "../components/ClientShell";
+import { RequirementsPanel } from "../components/RequirementsPanel";
 import { FeedHead, RailButton, SearchField, WorkLayout } from "../components/worldUi";
 import { notesFor, type PersonaId, type ReleaseNote } from "../data/clientNotes";
 import { PERSONA_COPY } from "../data/personaCopy";
@@ -8,27 +9,25 @@ import type { ClientId } from "../data/clients";
 import { HORIZON_TITLE, TIER_LABEL, leadSignal, noteScore, rerankFromText, visibleNotes, type HorizonFilter } from "../portal/feed";
 import { useBriefing } from "../portal/BriefingContext";
 import { useClient } from "../portal/useClient";
-import { readReq, reqText } from "../state/requirements";
+import { requirementText } from "../state/requirements";
 
 const FILTERS: HorizonFilter[] = ["all", "long", "quarter", "daily"];
 
 function PortalFeed({ clientId }: { clientId: ClientId }) {
   const hex = clientId === "hexworth";
   const notes = notesFor(clientId);
-  const { persona, briefing, toggleBriefing, briefingOpen } = useBriefing();
+  const { persona, setPersona, briefing, toggleBriefing, briefingOpen } = useBriefing();
   const copy = PERSONA_COPY[persona];
   const [filter, setFilter] = useState<HorizonFilter>("all");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string[]>([]);
-  const [clientReq, setClientReq] = useState(() => reqText(readReq(clientId)));
-  const [personaReq, setPersonaReq] = useState("");
   const [overrides, setOverrides] = useState<Record<string, number> | null>(null);
-  const [status, setStatus] = useState("Default ranking");
 
   useEffect(() => {
     setOpenId(null);
-  }, [persona]);
+    setOverrides(rerankFromText(notes, persona, requirementText(clientId, persona)));
+  }, [clientId, persona, notes]);
 
   const visible = useMemo(
     () => visibleNotes(notes, persona, filter, query, overrides),
@@ -42,12 +41,8 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
     daily: notes.filter((note) => note.tier === "daily").length,
   };
 
-  function rerank() {
-    const text = `${clientReq} ${personaReq}`.trim();
-    const next = rerankFromText(notes, persona, text);
-    if (!next) return;
-    setOverrides(next);
-    setStatus("Re-ranked");
+  function rerank(text: string) {
+    setOverrides(rerankFromText(notes, persona, text));
     setOpenId(null);
   }
 
@@ -114,42 +109,7 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
       )}
 
       <div className={hex ? "hx-rerank-wrap" : "ae-rerank-wrap"}>
-        <div className={hex ? "rerank-bar hx-theme" : "rerank-bar ae-theme"}>
-          <div className="rerank-fields">
-            <div>
-              <label className="rerank-field-label" htmlFor="rerank-client">
-                Client requirements
-              </label>
-              <textarea
-                className="rerank-textarea"
-                id="rerank-client"
-                rows={2}
-                value={clientReq}
-                placeholder="Problems to solve and business requirements set at agency level..."
-                onChange={(event) => setClientReq(event.target.value)}
-              />
-            </div>
-            <div>
-              <label className="rerank-field-label" htmlFor="rerank-persona">
-                Your focus
-              </label>
-              <textarea
-                className="rerank-textarea"
-                id="rerank-persona"
-                rows={2}
-                value={personaReq}
-                placeholder="Add your own lens on top of the client requirements..."
-                onChange={(event) => setPersonaReq(event.target.value)}
-              />
-            </div>
-          </div>
-          <div className="rerank-actions">
-            <button className="rerank-btn" type="button" disabled={!clientReq.trim() && !personaReq.trim()} onClick={rerank}>
-              <span className="rerank-spin">▲</span> Re-rank
-            </button>
-            <span className={status === "Re-ranked" ? "rerank-status live" : "rerank-status"}>{status}</span>
-          </div>
-        </div>
+        <RequirementsPanel clientId={clientId} persona={persona} onPersona={setPersona} onApply={rerank} />
         {briefingOpen ? (
           <section className={hex ? "hx-impact-panel briefing-panel" : "ae-impact-panel briefing-panel"} aria-label="Briefing">
             <h2>Briefing</h2>

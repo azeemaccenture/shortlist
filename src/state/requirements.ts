@@ -1,38 +1,101 @@
 import type { ClientId } from "../data/clients";
+import type { PersonaId } from "../data/clientNotes";
+import { REQUIREMENT_COPY } from "../data/requirementSources";
 
-const KEY = "shortlist.clientReqs";
+const KEY = "shortlist.requirementSources";
+const EVENT = "shortlist-requirements";
 
-export type ReqDraft = {
-  problems: string;
-  business: string;
+export type StoredSource = {
+  name: string;
+  meta: string;
+  text: string;
 };
 
-const EMPTY: ReqDraft = { problems: "", business: "" };
+export type PersonaSources = {
+  document?: StoredSource;
+  jira?: StoredSource;
+};
 
-function readAll(): Partial<Record<ClientId, ReqDraft>> {
+type Store = Partial<Record<ClientId, Partial<Record<PersonaId, PersonaSources>>>>;
+
+function readAll(): Store {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return {};
-    return parsed as Partial<Record<ClientId, ReqDraft>>;
+    return parsed as Store;
   } catch {
     return {};
   }
 }
 
-export function readReq(id: ClientId): ReqDraft {
-  const row = readAll()[id];
-  if (!row || typeof row.problems !== "string" || typeof row.business !== "string") return { ...EMPTY };
-  return { problems: row.problems, business: row.business };
+function writeAll(store: Store) {
+  sessionStorage.setItem(KEY, JSON.stringify(store));
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
 }
 
-export function writeReq(id: ClientId, draft: ReqDraft) {
-  const all = readAll();
-  all[id] = { problems: draft.problems, business: draft.business };
-  sessionStorage.setItem(KEY, JSON.stringify(all));
+export function readSources(clientId: ClientId, persona: PersonaId): PersonaSources {
+  return readAll()[clientId]?.[persona] ?? {};
 }
 
-export function reqText(draft: ReqDraft): string {
-  return [draft.problems.trim(), draft.business.trim()].filter(Boolean).join("\n");
+export function connectJira(clientId: ClientId, persona: PersonaId) {
+  const template = REQUIREMENT_COPY[clientId][persona].jira;
+  const store = readAll();
+  const client = store[clientId] ?? {};
+  const current = client[persona] ?? {};
+  client[persona] = {
+    ...current,
+    jira: { name: template.name, meta: template.meta, text: template.text },
+  };
+  store[clientId] = client;
+  writeAll(store);
+}
+
+export function attachDocument(clientId: ClientId, persona: PersonaId, fileName: string) {
+  const template = REQUIREMENT_COPY[clientId][persona].document;
+  const store = readAll();
+  const client = store[clientId] ?? {};
+  const current = client[persona] ?? {};
+  client[persona] = {
+    ...current,
+    document: {
+      name: fileName || template.name,
+      meta: template.meta,
+      text: `${template.text} ${fileName}`.trim(),
+    },
+  };
+  store[clientId] = client;
+  writeAll(store);
+}
+
+export function removeSource(clientId: ClientId, persona: PersonaId, kind: "document" | "jira") {
+  const store = readAll();
+  const client = store[clientId];
+  const current = client?.[persona];
+  if (!client || !current) return;
+  const next = { ...current };
+  delete next[kind];
+  client[persona] = next;
+  store[clientId] = client;
+  writeAll(store);
+}
+
+export function clearSources(clientId: ClientId, persona: PersonaId) {
+  const store = readAll();
+  const client = store[clientId];
+  if (!client) return;
+  delete client[persona];
+  store[clientId] = client;
+  writeAll(store);
+}
+
+export function requirementText(clientId: ClientId, persona: PersonaId): string {
+  const sources = readSources(clientId, persona);
+  return [sources.document?.text, sources.jira?.text].filter(Boolean).join(" ");
+}
+
+export function subscribeRequirements(listener: () => void) {
+  window.addEventListener(EVENT, listener);
+  return () => window.removeEventListener(EVENT, listener);
 }

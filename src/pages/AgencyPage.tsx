@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { RequirementsPanel } from "../components/RequirementsPanel";
 import { ShortlistLogo } from "../components/ShortlistLogo";
 import { CLIENTS, type ClientId } from "../data/clients";
 import {
@@ -13,7 +14,6 @@ import {
 } from "../data/intelMock";
 import { notesFor } from "../data/clientNotes";
 import { clientHref } from "../portal/useClient";
-import { readReq, writeReq, type ReqDraft } from "../state/requirements";
 
 const CLIENT_ORDER: ClientId[] = ["aether", "hexworth"];
 
@@ -75,11 +75,6 @@ export function AgencyPage() {
   const [query, setQuery] = useState("release notes software product management");
   const [sentimentMeta, setSentimentMeta] = useState("Not yet fetched");
   const [openReq, setOpenReq] = useState<ClientId | null>(null);
-  const [drafts, setDrafts] = useState<Record<ClientId, ReqDraft>>(() => ({
-    aether: readReq("aether"),
-    hexworth: readReq("hexworth"),
-  }));
-  const [saved, setSaved] = useState<ClientId | null>(null);
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -124,12 +119,6 @@ export function AgencyPage() {
       setSentimentMeta(`"${query.slice(0, 24)}…" · ${stamp}`);
       setSentimentBusy(false);
     }, 400);
-  }
-
-  function saveReq(id: ClientId) {
-    writeReq(id, drafts[id]);
-    setSaved(id);
-    later(() => setSaved((current) => (current === id ? null : current)), 2000);
   }
 
   return (
@@ -336,56 +325,7 @@ export function AgencyPage() {
                   className={open ? "ag-req-drawer open" : "ag-req-drawer"}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <div className="ag-req-field">
-                    <label className="ag-req-label" htmlFor={`${id}-problems`}>
-                      Problems to solve
-                    </label>
-                    <textarea
-                      className="ag-req-input"
-                      id={`${id}-problems`}
-                      rows={3}
-                      value={drafts[id].problems}
-                      placeholder={
-                        id === "aether"
-                          ? "e.g. Operations teams losing time to manual roaming calendar edits. Billing surprises eroding customer trust."
-                          : "e.g. Content partners blocked on legacy batch entitlement jobs. Support handle time too high on package confusion."
-                      }
-                      onChange={(event) =>
-                        setDrafts((current) => ({
-                          ...current,
-                          [id]: { ...current[id], problems: event.target.value },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="ag-req-field">
-                    <label className="ag-req-label" htmlFor={`${id}-business`}>
-                      Business requirements
-                    </label>
-                    <textarea
-                      className="ag-req-input"
-                      id={`${id}-business`}
-                      rows={3}
-                      value={drafts[id].business}
-                      placeholder={
-                        id === "aether"
-                          ? "e.g. Jira plug-in compatibility, FY Q3 network ops OKR, open API readiness by Q4."
-                          : "e.g. Q3 subscriber growth target, entitlements API v2.4 partner onboarding, signed webhook reliability."
-                      }
-                      onChange={(event) =>
-                        setDrafts((current) => ({
-                          ...current,
-                          [id]: { ...current[id], business: event.target.value },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="ag-req-footer">
-                    <button className="ag-req-save" type="button" onClick={() => saveReq(id)}>
-                      Save requirements
-                    </button>
-                    <span className={saved === id ? "ag-req-saved show" : "ag-req-saved"}>Saved</span>
-                  </div>
+                  <RequirementsPanel clientId={id} persona="cio" onApply={() => navigate(clientHref(id))} />
                 </div>
                 <div className="ag-client-card-actions">
                   <Link className="ag-client-card-enter" to={clientHref(id)} onClick={(event) => event.stopPropagation()}>
