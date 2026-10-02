@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ClientShell } from "../components/ClientShell";
+import { RailButton, ScoreHeader, WorkLayout, actionClass, useHex } from "../components/worldUi";
 import { CATALOG } from "../data/catalog";
 import { formatWhen } from "../format";
 import { nonEmptyLines, parsePriorityLine, parseUpload, type ParsedBrief } from "../intake/parseUpload";
@@ -242,239 +243,213 @@ export function IntakePage() {
         { title: "Top 5", body: "Same context and catalog always rank the same way.", when: "Then" },
       ];
 
+  const hex = useHex();
+  const primary = actionClass(hex, "primary");
+  const ghost = actionClass(hex, "ghost");
   if (!client) return <Navigate to="/" replace />;
 
   return (
     <ClientShell>
-      <section className="ac-hero">
-        <p className="ac-hero-eye">FY planning</p>
-        <h1>What should this shortlist decide?</h1>
-        <p className="ac-hero-lead">
-          Start as a CIO, Product Lead, or BA. Upload an FY brief or answer the assistant. Either path
-          saves one session context.
-        </p>
-      </section>
-
-      <main className="ac-body">
-      {context ? (
-        <p className="notice">A context is already saved for this session. Confirming again replaces it.</p>
-      ) : null}
-
-      <fieldset className="role-field">
-        <legend className="ac-qa-label">Role</legend>
-        <div className="ac-qa roles">
-          {ROLES.map((option) => (
-            <label key={option} className={role === option ? "ac-qa-card role-card is-on" : "ac-qa-card role-card"}>
-              <input
-                type="radio"
-                name="role"
-                value={option}
-                checked={role === option}
-                data-testid={`role-${option}`}
-                onChange={() => chooseRole(option)}
-              />
-              <span className="ac-qa-name">{ROLE_LABELS[option]}</span>
-              <span className="ac-qa-desc">{ROLE_COPY[option]}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <p className="ac-qa-label">Quick access</p>
-      <div className="ac-qa tabs" role="tablist" aria-label="Intake path">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "upload"}
-          className={mode === "upload" ? "ac-qa-card is-on" : "ac-qa-card"}
-          onClick={() => {
-            setMode("upload");
-            setError(null);
-          }}
-        >
-          <div className="ac-qa-top">
-            <div className="ac-qa-icon" aria-hidden="true">↑</div>
-            {mode === "upload" ? <span className="ac-live">Selected</span> : null}
-          </div>
-          <div>
-            <div className="ac-qa-name">Upload a brief</div>
-            <div className="ac-qa-tag">Goal, constraint, and priority lines</div>
-          </div>
-          <p className="ac-qa-desc">Parse a .txt or .md FY brief, or load the sample, into this session.</p>
-          <span className="ac-open">Open <span className="arr">→</span></span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "va"}
-          className={mode === "va" ? "ac-qa-card is-on" : "ac-qa-card"}
-          onClick={() => {
-            setMode("va");
-            setError(null);
-          }}
-        >
-          <div className="ac-qa-top">
-            <div className="ac-qa-icon" aria-hidden="true">◈</div>
-            {mode === "va" ? <span className="ac-live">Selected</span> : null}
-          </div>
-          <div>
-            <div className="ac-qa-name">Assistant</div>
-            <div className="ac-qa-tag">Three prompts, same context</div>
-          </div>
-          <p className="ac-qa-desc">Answer goals, constraints, and weighted priorities without a file.</p>
-          <span className="ac-open">Open <span className="arr">→</span></span>
-        </button>
-        <div className="ac-qa-card pipe">
-          <div className="ac-qa-icon">+</div>
-          <div>
-            <div className="ac-qa-name" style={{ fontSize: 18 }}>Either path</div>
-            <div className="ac-qa-tag">One path is enough to continue</div>
-          </div>
-        </div>
-      </div>
-
-      {error ? (
-        <p className="banner" role="alert" data-testid="intake-error">
-          {error}
-        </p>
-      ) : null}
-
-      {mode === "upload" ? (
-        <form
-          className="ac-panel"
-          onSubmit={(event) => {
-            event.preventDefault();
-            confirmUpload();
-          }}
-        >
-          <p className="muted">
-            Use lines that start with <code>Goal:</code>, <code>Constraint:</code>, and{" "}
-            <code>Priority: label | weight</code>.
-          </p>
-          <div className="ac-actions">
-            <label className="file-button">
-              Choose .txt or .md
-              <input
-                type="file"
-                accept=".txt,.md,text/plain,text/markdown"
-                data-testid="brief-file"
-                onChange={(event) => onFile(event.target.files?.[0])}
-              />
-            </label>
-            <button
-              type="button"
-              className="ac-ghost"
-              data-testid="load-sample"
-              onClick={() => applyUpload(SAMPLE_FILE_NAME, SAMPLE_BRIEF)}
-            >
-              Load sample FY brief
-            </button>
-          </div>
-          {fileName ? <p className="file-name">File: {fileName}</p> : null}
-          {parsed ? (
-            <BriefLists goals={parsed.goals} constraints={parsed.constraints} priorities={parsed.priorities} />
-          ) : null}
-          <button type="submit" className="ac-primary" data-testid="save-context">
-            Save context
-          </button>
-        </form>
-      ) : (
-        <div className="ac-panel">
-          <ol className="turns">
-            {vaGoals.length > 0 ? (
-              <li>
-                <span className="turn-label">Goals</span> {vaGoals.join(" · ")}
-              </li>
-            ) : null}
-            {vaConstraints.length > 0 ? (
-              <li>
-                <span className="turn-label">Constraints</span> {vaConstraints.join(" · ")}
-              </li>
-            ) : null}
-            {vaPriorities.length > 0 && vaStep === 3 ? (
-              <li>
-                <span className="turn-label">Priorities</span>{" "}
-                {vaPriorities.map((priority) => `${priority.label} (${priority.weight})`).join(" · ")}
-              </li>
-            ) : null}
-          </ol>
-
-          {prompt ? (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitVaStep();
+      <ScoreHeader
+        eyebrow="FY planning"
+        title="What should this shortlist decide?"
+        lede="Start as a CIO, Product Lead, or BA. Upload an FY brief or answer the assistant. Either path saves one session context."
+        stats={[
+          { n: CATALOG.length, l: "Features" },
+          {
+            n: mode === "upload" ? parsed?.goals.length || context?.goals.length || "—" : vaGoals.length || context?.goals.length || "—",
+            l: "Goals",
+          },
+          {
+            n:
+              mode === "upload"
+                ? parsed?.priorities.length || context?.priorities.length || "3–5"
+                : vaPriorities.length || context?.priorities.length || "3–5",
+            l: "Priorities",
+          },
+          { n: role ? ROLE_LABELS[role] : "—", l: "Role" },
+        ]}
+      />
+      <WorkLayout
+        label="Path"
+        rail={
+          <>
+            <RailButton
+              active={mode === "upload"}
+              label="Upload a brief"
+              onClick={() => {
+                setMode("upload");
+                setError(null);
               }}
-            >
-              <label className="stack" htmlFor="va-draft">
-                <span>
-                  Turn {vaStep + 1} of {VA_TURN_COUNT}. {prompt.prompt}
-                </span>
-                <textarea
-                  id="va-draft"
-                  data-testid="va-input"
-                  rows={5}
-                  value={vaDraft}
-                  placeholder={prompt.hint}
-                  onChange={(event) => setVaDraft(event.target.value)}
+            />
+            <RailButton
+              active={mode === "va"}
+              label="Assistant"
+              onClick={() => {
+                setMode("va");
+                setError(null);
+              }}
+            />
+          </>
+        }
+      >
+        {context ? (
+          <p className="notice">A context is already saved for this session. Confirming again replaces it.</p>
+        ) : null}
+
+        <fieldset className="role-field">
+          <legend>Role</legend>
+          <div className={hex ? "hx-persona-pills intake-roles" : "intake-roles"} role="radiogroup" aria-label="Role">
+            {ROLES.map((option) => (
+              <label
+                key={option}
+                className={`choice ${hex ? "hx-persona-pill" : "ae-persona-tab"}${role === option ? " active" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="role"
+                  value={option}
+                  checked={role === option}
+                  data-testid={`role-${option}`}
+                  onChange={() => chooseRole(option)}
+                />
+                {ROLE_LABELS[option]}
+                <span className="sr-only">. {ROLE_COPY[option]}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {error ? (
+          <p className="banner" role="alert" data-testid="intake-error">
+            {error}
+          </p>
+        ) : null}
+
+        {mode === "upload" ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              confirmUpload();
+            }}
+          >
+            <p className="hint">
+              Use lines that start with <code>Goal:</code>, <code>Constraint:</code>, and{" "}
+              <code>Priority: label | weight</code>.
+            </p>
+            <div className="product-actions">
+              <label className={`file-button ${ghost}`}>
+                Choose .txt or .md
+                <input
+                  type="file"
+                  accept=".txt,.md,text/plain,text/markdown"
+                  data-testid="brief-file"
+                  onChange={(event) => onFile(event.target.files?.[0])}
                 />
               </label>
-              <button type="submit" className="ac-primary" data-testid="va-continue">
-                Continue
+              <button
+                type="button"
+                className={ghost}
+                data-testid="load-sample"
+                onClick={() => applyUpload(SAMPLE_FILE_NAME, SAMPLE_BRIEF)}
+              >
+                Load sample FY brief
               </button>
-            </form>
-          ) : (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                confirmVa();
-              }}
-            >
-              <BriefLists goals={vaGoals} constraints={vaConstraints} priorities={vaPriorities} />
-              <div className="ac-actions">
-                <button
-                  type="button"
-                  className="ac-ghost"
-                  onClick={() => {
-                    setVaStep(2);
-                    setVaDraft(
-                      vaPriorities.map((priority) => `${priority.label} | ${priority.weight}`).join("\n"),
-                    );
-                    setError(null);
-                  }}
-                >
-                  Edit priorities
+            </div>
+            {fileName ? <p className="file-name">File: {fileName}</p> : null}
+            {parsed ? (
+              <BriefLists goals={parsed.goals} constraints={parsed.constraints} priorities={parsed.priorities} />
+            ) : null}
+            <button type="submit" className={primary} data-testid="save-context">
+              Save context
+            </button>
+          </form>
+        ) : (
+          <div>
+            <ol className="turns">
+              {vaGoals.length > 0 ? (
+                <li>
+                  <span className="turn-label">Goals</span> {vaGoals.join(" · ")}
+                </li>
+              ) : null}
+              {vaConstraints.length > 0 ? (
+                <li>
+                  <span className="turn-label">Constraints</span> {vaConstraints.join(" · ")}
+                </li>
+              ) : null}
+              {vaPriorities.length > 0 && vaStep === 3 ? (
+                <li>
+                  <span className="turn-label">Priorities</span>{" "}
+                  {vaPriorities.map((priority) => `${priority.label} (${priority.weight})`).join(" · ")}
+                </li>
+              ) : null}
+            </ol>
+
+            {prompt ? (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  submitVaStep();
+                }}
+              >
+                <label className="stack" htmlFor="va-draft">
+                  <span>
+                    Turn {vaStep + 1} of {VA_TURN_COUNT}. {prompt.prompt}
+                  </span>
+                  <textarea
+                    id="va-draft"
+                    className="brief-input"
+                    data-testid="va-input"
+                    rows={5}
+                    value={vaDraft}
+                    placeholder={prompt.hint}
+                    onChange={(event) => setVaDraft(event.target.value)}
+                  />
+                </label>
+                <button type="submit" className={primary} data-testid="va-continue">
+                  Continue
                 </button>
-                <button type="submit" className="ac-primary" data-testid="save-context">
-                  Save context
-                </button>
+              </form>
+            ) : (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  confirmVa();
+                }}
+              >
+                <BriefLists goals={vaGoals} constraints={vaConstraints} priorities={vaPriorities} />
+                <div className="product-actions">
+                  <button
+                    type="button"
+                    className={ghost}
+                    onClick={() => {
+                      setVaStep(2);
+                      setVaDraft(vaPriorities.map((priority) => `${priority.label} | ${priority.weight}`).join("\n"));
+                      setError(null);
+                    }}
+                  >
+                    Edit priorities
+                  </button>
+                  <button type="submit" className={primary} data-testid="save-context">
+                    Save context
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        <ul className="activity">
+          {activity.map((item) => (
+            <li key={`${item.title}-${item.when}`}>
+              <div>
+                <strong>{item.title}</strong> — {item.body}
               </div>
-            </form>
-          )}
-        </div>
-      )}
-
-      <div className="ac-strip" aria-label="Session snapshot">
-        <p className="ac-strip-label">This session</p>
-        <div className="ac-film">
-          <div className="ac-film-cell"><div className="ac-film-n">{CATALOG.length}</div><div className="ac-film-l">Features</div></div>
-          <div className="ac-film-cell"><div className="ac-film-n">{mode === "upload" ? (parsed?.goals.length || context?.goals.length || "—") : (vaGoals.length || context?.goals.length || "—")}</div><div className="ac-film-l">Goals</div></div>
-          <div className="ac-film-cell"><div className="ac-film-n">{mode === "upload" ? (parsed?.priorities.length || context?.priorities.length || "3–5") : (vaPriorities.length || context?.priorities.length || "3–5")}</div><div className="ac-film-l">Priorities</div></div>
-          <div className="ac-film-cell"><div className="ac-film-n">{role ? ROLE_LABELS[role] : "—"}</div><div className="ac-film-l">Role</div></div>
-          <div className="ac-film-cell"><div className="ac-film-n">5</div><div className="ac-film-l">Top picks</div></div>
-        </div>
-      </div>
-
-      <p className="ac-act-label">Recent activity</p>
-      <ul className="ac-act">
-        {activity.map((item) => (
-          <li key={`${item.title}-${item.when}`}>
-            <div><strong>{item.title}</strong> — {item.body}</div>
-            <time>{item.when}</time>
-          </li>
-        ))}
-      </ul>
-      </main>
+              <time>{item.when}</time>
+            </li>
+          ))}
+        </ul>
+      </WorkLayout>
     </ClientShell>
   );
 }

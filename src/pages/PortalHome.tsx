@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ClientShell } from "../components/ClientShell";
+import { FeedHead, RailButton, SearchField, WorkLayout } from "../components/worldUi";
 import { CATALOG } from "../data/catalog";
 import { CLIENT_PREVIEWS, type ClientId } from "../data/clients";
+import { PERSONA_COPY } from "../data/personaCopy";
 import {
   HORIZON_LABEL,
   RELEASE_DROP,
@@ -14,35 +16,52 @@ import {
 import { formatScore } from "../format";
 import { useClient } from "../portal/useClient";
 import { rankTop } from "../scoring/rank";
+import { readReq, reqText } from "../state/requirements";
 import { useSession } from "../state/SessionProvider";
-import { ROLE_LABELS, type ShortlistContext } from "../types";
+import { ROLE_LABELS, type Role, type ShortlistContext } from "../types";
 
 type Filter = Horizon | "all";
 
-function scoringContext(clientId: ClientId, saved: ShortlistContext | null, pendingRole: ShortlistContext["role"] | null) {
+const TIER_TITLES: Record<Filter, string> = {
+  all: "All releases",
+  long: "Long-term",
+  quarter: "Quarter",
+  daily: "Day-to-day",
+};
+
+function scoringContext(
+  clientId: ClientId,
+  saved: ShortlistContext | null,
+  pendingRole: Role | null,
+): ShortlistContext {
   if (saved) return saved;
   const preview = CLIENT_PREVIEWS[clientId];
   if (pendingRole) return { ...preview, role: pendingRole };
   return preview;
 }
 
-function useFeed(clientId: ClientId) {
-  const notes = clientNotes(clientId);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [query, setQuery] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return notes
-      .filter((note) => (filter === "all" ? true : note.horizon === filter))
-      .filter((note) => {
-        if (!needle) return true;
-        return `${note.headline} ${note.salient} ${note.version}`.toLowerCase().includes(needle);
-      })
-      .slice()
-      .sort((left, right) => right.match - left.match);
-  }, [notes, filter, query]);
-  return { notes, visible, filter, setFilter, query, setQuery, openId, setOpenId };
+/** Display order for salient notes. Catalog ranking stays in rank.ts. */
+function roleScore(note: SalientChange, role: Role): number {
+  const bias: Record<Role, Record<Horizon, number>> = {
+    cio: { long: 12, quarter: 0, daily: -18 },
+    product_lead: { long: -4, quarter: 10, daily: -6 },
+    ba: { long: -16, quarter: 2, daily: 12 },
+  };
+  return Math.max(1, Math.min(99, note.match + bias[role][note.horizon]));
+}
+
+function keywordLens(notes: SalientChange[], role: Role, text: string): Record<string, number> {
+  const words = text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 2);
+  const scores: Record<string, number> = {};
+  for (const note of notes) {
+    const hay = `${note.headline} ${note.salient} ${note.version}`.toLowerCase();
+    const hits = words.filter((word) => hay.includes(word)).length;
+    scores[note.id] = Math.max(1, Math.min(99, roleScore(note, role) + hits * 6));
+  }
+  return scores;
 }
 
 function RelevantFeatures({ clientId }: { clientId: ClientId }) {
@@ -69,334 +88,320 @@ function RelevantFeatures({ clientId }: { clientId: ClientId }) {
           </li>
         ))}
       </ol>
+      <Link className="fy-link" to={`${base}/intake`}>
+        Open FY brief
+      </Link>
     </section>
   );
 }
 
-function AetherOverview({ clientId }: { clientId: ClientId }) {
-  const feed = useFeed(clientId);
-  const lead = feed.notes[0];
-  return (
-    <>
-      <section className="ae-data" aria-label="Release overview">
-        <div className="ae-data-in">
-          <div className="ae-data-lead">
-            <h1>
-              {RELEASE_DROP.label} · release {RELEASE_DROP.release}
-            </h1>
-            <p>
-              {lead.salient} Ordered for Aether network priorities — long-term platforms, quarter deliveries,
-              day-to-day operations.
-            </p>
-          </div>
-          <div className="ae-stat">
-            <div className="n">{feed.notes.length}</div>
-            <div className="l">Salient changes</div>
-          </div>
-          <div className="ae-stat">
-            <div className="n">
-              {feed.notes[0] ? Math.max(...feed.notes.map((note) => note.match)) : "—"}
-              <em>%</em>
-            </div>
-            <div className="l">Top match</div>
-          </div>
-          <div className="ae-stat">
-            <div className="n">Q3</div>
-            <div className="l">Focus window</div>
-          </div>
-          <div className="ae-stat">
-            <div className="n">3</div>
-            <div className="l">Horizons</div>
-          </div>
-        </div>
-      </section>
-      <div className="ae-main">
-        <FilterRail
-          clientId={clientId}
-          filter={feed.filter}
-          onFilter={(next) => {
-            feed.setFilter(next);
-            feed.setOpenId(null);
-          }}
-          variant="aether"
-        />
-        <div>
-          <FeedHead
-            title={feed.filter === "all" ? "Client-salient changes" : HORIZON_LABEL[feed.filter]}
-            query={feed.query}
-            onQuery={(value) => {
-              feed.setQuery(value);
-              feed.setOpenId(null);
-            }}
-            variant="aether"
-          />
-          {feed.visible.length === 0 ? (
-            <div className="ae-empty is-visible">
-              <p>
-                <strong>No notes match</strong>
-              </p>
-              <p>Try another horizon or clear your search.</p>
-            </div>
-          ) : (
-            <div className="ae-list" data-testid="salient-list">
-              {feed.visible.map((note) => (
-                <AetherNote
-                  key={note.id}
-                  note={note}
-                  open={feed.openId === note.id}
-                  onToggle={() => feed.setOpenId(feed.openId === note.id ? null : note.id)}
-                />
-              ))}
-            </div>
-          )}
-          <RelevantFeatures clientId={clientId} />
-        </div>
-      </div>
-    </>
-  );
-}
+function PortalFeed({ clientId }: { clientId: ClientId }) {
+  const hex = clientId === "hexworth";
+  const { context, pendingRole } = useSession();
+  const lens = scoringContext(clientId, context, pendingRole);
+  const persona = PERSONA_COPY[lens.role];
+  const notes = clientNotes(clientId);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [clientReq, setClientReq] = useState(() => reqText(readReq(clientId)));
+  const [personaReq, setPersonaReq] = useState("");
+  const [lensScores, setLensScores] = useState<Record<string, number> | null>(null);
+  const [status, setStatus] = useState("Default ranking");
 
-function HexworthOverview({ clientId }: { clientId: ClientId }) {
-  const feed = useFeed(clientId);
-  const lead = feed.notes.find((note) => note.horizon === "quarter") ?? feed.notes[0];
-  return (
-    <>
-      <section className="hx-hero">
-        <div className="hx-hero-in">
-          <div>
-            <p className="hx-hero-eye">
-              {RELEASE_DROP.label} · release {RELEASE_DROP.release}
-            </p>
-            <h1>{lead.headline}</h1>
-            <p>{lead.salient}</p>
+  useEffect(() => {
+    setLensScores(null);
+    setStatus("Default ranking");
+  }, [lens.role]);
+
+  const scoreFor = (note: SalientChange) => lensScores?.[note.id] ?? roleScore(note, lens.role);
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return notes
+      .filter((note) => (filter === "all" ? true : note.horizon === filter))
+      .filter((note) => {
+        if (!needle) return true;
+        return `${note.headline} ${note.salient} ${note.version}`.toLowerCase().includes(needle);
+      })
+      .slice()
+      .sort((left, right) => scoreFor(right) - scoreFor(left));
+    // scoreFor closes over lens role and lensScores
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, filter, query, lens.role, lensScores]);
+
+  const top = Math.max(...notes.map((note) => scoreFor(note)));
+  const counts: Record<Filter, number> = {
+    all: notes.length,
+    long: horizonCount(clientId, "long"),
+    quarter: horizonCount(clientId, "quarter"),
+    daily: horizonCount(clientId, "daily"),
+  };
+
+  function rerank() {
+    const text = `${clientReq} ${personaReq}`.trim();
+    if (!text) return;
+    setLensScores(keywordLens(notes, lens.role, text));
+    setStatus("Re-ranked");
+    setOpenId(null);
+  }
+
+  const noteList = (
+    <div id={hex ? "hxNoteList" : "aeNoteList"} data-testid="salient-list">
+      {visible.map((note) => {
+        const open = openId === note.id;
+        const score = scoreFor(note);
+        return (
+          <div className={hex ? "hx-note-row" : "ae-note-row"} key={note.id}>
             <button
-              className="hx-hero-cta"
+              className={hex ? "hx-note-row-main" : "ae-note-row-main"}
               type="button"
-              onClick={() => {
-                feed.setFilter("quarter");
-                feed.setOpenId(lead.id);
-              }}
+              onClick={() => setOpenId(open ? null : note.id)}
             >
-              View Quarter releases →
+              <div className={hex ? `hx-tier-pill ${note.horizon}` : `ae-tier-tag ${note.horizon}`}>
+                {HORIZON_LABEL[note.horizon]}
+              </div>
+              <div>
+                <div className={hex ? "hx-note-title" : "ae-note-title"}>{note.headline}</div>
+                <div className={hex ? "hx-note-excerpt" : "ae-note-excerpt"}>{note.salient}</div>
+                <div className={hex ? "hx-note-chips" : "ae-note-chips"}>
+                  <span className={hex ? "hx-note-chip" : "ae-note-chip"}>{note.date}</span>
+                  <span className={hex ? "hx-note-chip" : "ae-note-chip"}>{note.version}</span>
+                </div>
+              </div>
+              <div className={hex ? "hx-note-score" : "ae-note-score"}>
+                <div className="n">
+                  {score}
+                  <em>%</em>
+                </div>
+                <div className="l">Match</div>
+              </div>
             </button>
+            {open ? (
+              <div className={hex ? "hx-note-expand open" : "ae-note-expand open"}>
+                <div>
+                  <h4>Summary</h4>
+                  <p>{note.salient}</p>
+                </div>
+                <div>
+                  <h4>Release</h4>
+                  <p>
+                    {RELEASE_DROP.label} · {note.version} · mock scrape
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
-          <aside className="hx-hero-fig">
-            <div className="big">{lead.match}%</div>
-            <div className="lbl">Match score</div>
-          </aside>
-        </div>
-      </section>
-      <div className="hx-main">
-        <FilterRail
-          clientId={clientId}
-          filter={feed.filter}
-          onFilter={(next) => {
-            feed.setFilter(next);
-            feed.setOpenId(null);
-          }}
-          variant="hexworth"
-        />
-        <div>
-          <FeedHead
-            title={feed.filter === "all" ? "Client-salient changes" : HORIZON_LABEL[feed.filter]}
-            query={feed.query}
-            onQuery={(value) => {
-              feed.setQuery(value);
-              feed.setOpenId(null);
-            }}
-            variant="hexworth"
-          />
-          {feed.visible.length === 0 ? (
-            <div className="hx-empty is-visible">No notes match this filter.</div>
-          ) : (
-            <div className="hx-list" data-testid="salient-list">
-              {feed.visible.map((note) => (
-                <HexworthNote
-                  key={note.id}
-                  note={note}
-                  open={feed.openId === note.id}
-                  onToggle={() => feed.setOpenId(feed.openId === note.id ? null : note.id)}
-                />
-              ))}
+        );
+      })}
+    </div>
+  );
+
+  const filters: Filter[] = ["all", "long", "quarter", "daily"];
+
+  return (
+    <div data-testid="portal-home">
+      {hex ? (
+        <section className="hx-hero">
+          <div className="hx-hero-in">
+            <div>
+              <p className="hx-hero-eyebrow">Latest release focus · {persona.eyebrow}</p>
+              <h1>{persona.heroTitle}</h1>
+              <p className="hx-hero-sub">{persona.heroSub}</p>
             </div>
-          )}
-          <RelevantFeatures clientId={clientId} />
+            <aside className="hx-hero-fig">
+              <div className="hx-hero-big">{top}%</div>
+              <div className="hx-hero-fig-lbl">Top match</div>
+            </aside>
+          </div>
+        </section>
+      ) : (
+        <div className="ae-data-header">
+          <div className="ae-data-header-in">
+            <div className="ae-data-lead">
+              <h1>{persona.heroTitle}</h1>
+              <p>{persona.heroSub}</p>
+            </div>
+            <div className="ae-kpi">
+              <div className="n">{notes.length}</div>
+              <div className="l">Open notes</div>
+            </div>
+            <div className="ae-kpi">
+              <div className="n">
+                {top}
+                <em>%</em>
+              </div>
+              <div className="l">Top match</div>
+            </div>
+            <div className="ae-kpi">
+              <div className="n">Q3</div>
+              <div className="l">Focus window</div>
+            </div>
+            <div className="ae-kpi">
+              <div className="n">3</div>
+              <div className="l">Horizons</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hex ? (
+        <div className="hx-persona-bar">
+          <div className="hx-persona-bar-in">
+            <PersonaFields clientId={clientId} roleLine={persona.roleLine} horizon={persona.horizon} objective={persona.objectives[clientId]} tags={persona.tags[clientId]} />
+          </div>
+        </div>
+      ) : (
+        <div className="ae-persona-panel-in">
+          <PersonaFields clientId={clientId} roleLine={persona.roleLine} horizon={persona.horizon} objective={persona.objectives[clientId]} tags={persona.tags[clientId]} />
+        </div>
+      )}
+
+      <div className={hex ? "hx-rerank-wrap" : "ae-rerank-wrap"}>
+        <div className={hex ? "rerank-bar hx-theme" : "rerank-bar ae-theme"}>
+          <div className="rerank-fields">
+            <div>
+              <label className="rerank-field-label" htmlFor="rerank-client">
+                Client requirements
+              </label>
+              <textarea
+                className="rerank-textarea"
+                id="rerank-client"
+                rows={2}
+                value={clientReq}
+                placeholder="Problems to solve and business requirements set at agency level..."
+                onChange={(event) => setClientReq(event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="rerank-field-label" htmlFor="rerank-persona">
+                Your focus
+              </label>
+              <textarea
+                className="rerank-textarea"
+                id="rerank-persona"
+                rows={2}
+                value={personaReq}
+                placeholder="Add your own lens on top of the client requirements..."
+                onChange={(event) => setPersonaReq(event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="rerank-actions">
+            <button className="rerank-btn" type="button" disabled={!clientReq.trim() && !personaReq.trim()} onClick={rerank}>
+              <span className="rerank-spin">▲</span> Re-rank
+            </button>
+            <span className={status === "Re-ranked" ? "rerank-status live" : "rerank-status"}>{status}</span>
+          </div>
         </div>
       </div>
-    </>
-  );
-}
 
-function FilterRail({
-  clientId,
-  filter,
-  onFilter,
-  variant,
-}: {
-  clientId: ClientId;
-  filter: Filter;
-  onFilter: (next: Filter) => void;
-  variant: "aether" | "hexworth";
-}) {
-  const items: { id: Filter; label: string; count: string }[] = [
-    { id: "all", label: variant === "aether" ? "All releases" : "All", count: String(clientNotes(clientId).length) },
-    { id: "long", label: "Long-term", count: String(horizonCount(clientId, "long")) },
-    { id: "quarter", label: "Quarter", count: String(horizonCount(clientId, "quarter")) },
-    { id: "daily", label: "Day-to-day", count: String(horizonCount(clientId, "daily")) },
-  ];
-  if (variant === "hexworth") {
-    return (
-      <nav className="hx-rail" aria-label="Horizon">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={filter === item.id ? "is-on" : undefined}
-            onClick={() => onFilter(item.id)}
-          >
-            {item.label}
-            <small>{item.id === "all" ? `${item.count} notes` : item.count}</small>
-          </button>
-        ))}
-      </nav>
-    );
-  }
-  return (
-    <nav className="ae-filters" aria-label="Horizon">
-      <p className="ae-filters-label">Horizon</p>
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className={filter === item.id ? "is-on" : undefined}
-          onClick={() => onFilter(item.id)}
-        >
-          {item.label} <span className="cnt">{item.count}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function FeedHead({
-  title,
-  query,
-  onQuery,
-  variant,
-}: {
-  title: string;
-  query: string;
-  onQuery: (value: string) => void;
-  variant: "aether" | "hexworth";
-}) {
-  const field = (
-    <label className={variant === "aether" ? "ae-search" : "hx-search"}>
-      <SearchIcon />
-      <input
-        type="search"
-        value={query}
-        placeholder="Search notes…"
-        onChange={(event) => onQuery(event.target.value)}
-      />
-    </label>
-  );
-  if (variant === "hexworth") {
-    return (
-      <div className="hx-head">
-        <h2>{title}</h2>
-        {field}
-      </div>
-    );
-  }
-  return (
-    <div className="ae-feed-head">
-      <h2>{title}</h2>
-      {field}
+      <WorkLayout
+        label="Horizon"
+        rail={
+          <>
+            {filters.map((id) => (
+              <RailButton
+                key={id}
+                active={filter === id}
+                label={id === "all" && hex ? "All" : TIER_TITLES[id]}
+                count={hex ? `${counts[id]} notes` : counts[id]}
+                onClick={() => {
+                  setFilter(id);
+                  setOpenId(null);
+                }}
+              />
+            ))}
+          </>
+        }
+      >
+        <FeedHead title={TIER_TITLES[filter]}>
+          <SearchField
+            value={query}
+            placeholder="Search notes..."
+            onChange={(value) => {
+              setQuery(value);
+              setOpenId(null);
+            }}
+          />
+        </FeedHead>
+        {visible.length === 0 ? (
+          <div className={hex ? "hx-empty show" : "ae-empty show"}>No notes match this filter.</div>
+        ) : (
+          noteList
+        )}
+        <RelevantFeatures clientId={clientId} />
+      </WorkLayout>
     </div>
   );
 }
 
-function AetherNote({ note, open, onToggle }: { note: SalientChange; open: boolean; onToggle: () => void }) {
+function PersonaFields({
+  clientId,
+  roleLine,
+  horizon,
+  objective,
+  tags,
+}: {
+  clientId: ClientId;
+  roleLine: string;
+  horizon: string;
+  objective: string;
+  tags: string[];
+}) {
+  const hex = clientId === "hexworth";
+  if (hex) {
+    return (
+      <>
+        <div className="hx-pfield">
+          <span className="hx-pfield-label">Viewing as</span>
+          <div className="hx-pfield-value">{roleLine}</div>
+        </div>
+        <div className="hx-pfield">
+          <span className="hx-pfield-label">Focus horizon</span>
+          <div className="hx-pfield-value">{horizon}</div>
+        </div>
+        <div className="hx-pfield" style={{ flex: 2 }}>
+          <span className="hx-pfield-label">FY objectives</span>
+          <div className="hx-pfield-value">{objective}</div>
+        </div>
+        <div className="hx-pfield">
+          <span className="hx-pfield-label">Matching on</span>
+          <div className="hx-ptags">
+            {tags.map((tag) => (
+              <span className="hx-ptag" key={tag}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
   return (
     <>
-      <button className={open ? "ae-row is-open" : "ae-row"} type="button" onClick={onToggle}>
-        <div className={`ae-row-tier ${note.horizon}`}>{HORIZON_LABEL[note.horizon]}</div>
-        <div className="ae-row-main">
-          <h3>{note.headline}</h3>
-          <p>{note.salient}</p>
-          <div className="ae-row-meta">
-            <span>{note.date}</span>
-            <span className="ver">{note.version}</span>
-          </div>
+      <div className="ae-persona-field">
+        <span className="ae-persona-field-label">Viewing as</span>
+        <div className="ae-persona-field-value">{roleLine}</div>
+      </div>
+      <div className="ae-persona-field">
+        <span className="ae-persona-field-label">Focus horizon</span>
+        <div className="ae-persona-field-value">{horizon}</div>
+      </div>
+      <div className="ae-persona-field" style={{ flex: 2 }}>
+        <span className="ae-persona-field-label">FY objectives</span>
+        <div className="ae-persona-field-value">{objective}</div>
+      </div>
+      <div className="ae-persona-field">
+        <span className="ae-persona-field-label">Matching on</span>
+        <div className="ae-persona-tags">
+          {tags.map((tag) => (
+            <span className="ae-persona-tag" key={tag}>
+              {tag}
+            </span>
+          ))}
         </div>
-        <div className="ae-row-score">
-          <strong>{note.match}</strong>
-          <span>Match</span>
-        </div>
-      </button>
-      {open ? (
-        <div className="ae-expand is-visible">
-          <div className="ae-expand-grid">
-            <div>
-              <h4>Salient change</h4>
-              <p>{note.salient}</p>
-            </div>
-            <div>
-              <h4>Release</h4>
-              <p>
-                {RELEASE_DROP.label} · {note.version} · mock scrape
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function HexworthNote({ note, open, onToggle }: { note: SalientChange; open: boolean; onToggle: () => void }) {
-  return (
-    <>
-      <button className={open ? "hx-row is-open" : "hx-row"} type="button" onClick={onToggle}>
-        <div className={`hx-row-tier ${note.horizon}`}>{HORIZON_LABEL[note.horizon]}</div>
-        <div className="hx-row-main">
-          <h3>{note.headline}</h3>
-          <p>{note.salient}</p>
-          <div className="hx-row-meta">
-            <span>{note.date}</span>
-            <span className="ver">{note.version}</span>
-          </div>
-        </div>
-        <div className="hx-row-score">
-          <strong>{note.match}%</strong>
-          <span>Match</span>
-        </div>
-      </button>
-      {open ? (
-        <div className="hx-expand is-visible">
-          <div className="hx-expand-grid">
-            <div>
-              <h4>Salient change</h4>
-              <p>{note.salient}</p>
-            </div>
-            <div>
-              <h4>Release</h4>
-              <p>
-                {RELEASE_DROP.label} · {note.version} · mock scrape
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      </div>
     </>
   );
 }
@@ -406,13 +411,7 @@ export function PortalHome() {
   if (!client) return <Navigate to="/" replace />;
   return (
     <ClientShell>
-      <div data-testid="portal-home">
-        {client.id === "hexworth" ? (
-          <HexworthOverview clientId={client.id} />
-        ) : (
-          <AetherOverview clientId={client.id} />
-        )}
-      </div>
+      <PortalFeed clientId={client.id} />
     </ClientShell>
   );
 }

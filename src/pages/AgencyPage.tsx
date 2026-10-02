@@ -1,182 +1,398 @@
-import { Link } from "react-router-dom";
-import { CATALOG } from "../data/catalog";
-import { CLIENT_PREVIEWS, CLIENTS, type ClientId } from "../data/clients";
-import { RELEASE_DROP, portfolioStats } from "../data/releaseNotes";
-import { formatScore } from "../format";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CLIENTS, type ClientId } from "../data/clients";
+import {
+  FETCH_STEPS,
+  MOCK_FETCH,
+  MOCK_SENTIMENT,
+  MOCK_TRENDS,
+  SCRAPE_SOURCES,
+  inferClient,
+  type ScrapeSource,
+  type UpdateCard,
+} from "../data/intelMock";
+import { RELEASE_DROP, clientNotes } from "../data/releaseNotes";
 import { clientHref } from "../portal/useClient";
-import { rankTop } from "../scoring/rank";
-import { ROLE_LABELS } from "../types";
+import { readReq, writeReq, type ReqDraft } from "../state/requirements";
 
-function clientRank(clientId: ClientId) {
-  return rankTop(CLIENT_PREVIEWS[clientId], CATALOG);
+const CLIENT_ORDER: ClientId[] = ["aether", "hexworth"];
+
+const CARD_COPY: Record<ClientId, { description: string; pills: string[] }> = {
+  aether: {
+    description:
+      "Network intelligence platform. Multi-year 5G orchestration, network operations console modernisation, and open API readiness.",
+    pills: ["5G Orchestration", "Network Ops", "Open API"],
+  },
+  hexworth: {
+    description:
+      "Streaming and media platform. Subscriber identity, content entitlements API, and partner hub reliability for Q3 growth targets.",
+    pills: ["Streaming API", "Entitlements", "Partner Hub"],
+  },
+};
+
+function seedHeadlines(): UpdateCard[] {
+  const types: UpdateCard["type"][] = ["platform", "product", "ops", "security", "product"];
+  return RELEASE_DROP.headlines.map((item, index) => ({
+    id: item.id,
+    title: item.headline,
+    description: item.salient,
+    type: types[index % types.length],
+    date: RELEASE_DROP.label,
+    client: inferClient(`${item.headline} ${item.salient}`),
+  }));
 }
 
 export function AgencyPage() {
-  const stats = portfolioStats();
-  const aether = clientRank("aether");
-  const hexworth = clientRank("hexworth");
-  const aetherTop = aether[0];
-  const hexworthTop = hexworth[0];
+  const navigate = useNavigate();
+  const [source, setSource] = useState<ScrapeSource>("saas");
+  const [tab, setTab] = useState<"update" | "trends" | "sentiment">("update");
+  const [cards, setCards] = useState<UpdateCard[]>(() => seedHeadlines());
+  const [fetching, setFetching] = useState(false);
+  const [fetchStep, setFetchStep] = useState(0);
+  const [trends, setTrends] = useState<typeof MOCK_TRENDS | null>(null);
+  const [trendsBusy, setTrendsBusy] = useState(false);
+  const [sentiment, setSentiment] = useState<typeof MOCK_SENTIMENT | null>(null);
+  const [sentimentBusy, setSentimentBusy] = useState(false);
+  const [query, setQuery] = useState("release notes software product management");
+  const [sentimentMeta, setSentimentMeta] = useState("Not yet fetched");
+  const [openReq, setOpenReq] = useState<ClientId | null>(null);
+  const [drafts, setDrafts] = useState<Record<ClientId, ReqDraft>>(() => ({
+    aether: readReq("aether"),
+    hexworth: readReq("hexworth"),
+  }));
+  const [saved, setSaved] = useState<ClientId | null>(null);
+  const timers = useRef<number[]>([]);
+
+  useEffect(() => {
+    return () => {
+      timers.current.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  function later(fn: () => void, ms: number) {
+    const id = window.setTimeout(fn, ms);
+    timers.current.push(id);
+  }
+
+  function fetchNotes() {
+    if (fetching) return;
+    setTab("update");
+    setFetching(true);
+    setFetchStep(0);
+    FETCH_STEPS.forEach((_, index) => {
+      later(() => setFetchStep(index), index * 280);
+    });
+    later(() => {
+      setCards(MOCK_FETCH[source]);
+      setFetching(false);
+    }, FETCH_STEPS.length * 280);
+  }
+
+  function fetchTrends() {
+    setTrendsBusy(true);
+    later(() => {
+      setTrends(MOCK_TRENDS);
+      setTrendsBusy(false);
+    }, 400);
+  }
+
+  function fetchSentiment() {
+    setSentimentBusy(true);
+    later(() => {
+      setSentiment(MOCK_SENTIMENT);
+      const now = new Date();
+      const stamp = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      setSentimentMeta(`"${query.slice(0, 24)}…" · ${stamp}`);
+      setSentimentBusy(false);
+    }, 400);
+  }
+
+  function saveReq(id: ClientId) {
+    writeReq(id, drafts[id]);
+    setSaved(id);
+    later(() => setSaved((current) => (current === id ? null : current)), 2000);
+  }
 
   return (
-    <div className="world world-accenture" role="region" aria-label="Accenture Song agency portfolio" data-testid="agency-home">
-      <header className="ac-bar">
-        <Link className="ac-mark" to="/">
-          <span className="chev">&gt;</span>PulseNotes
-        </Link>
-        <nav className="ac-nav" aria-label="Agency">
-          <span className="is-on">Portfolio</span>
-          <span>Briefings</span>
-          <span>Insights</span>
-        </nav>
-        <div className="ac-bar-end">RG</div>
+    <div
+      id="screen-agency"
+      className="screen active"
+      role="region"
+      aria-label="Accenture Song agency portfolio"
+      data-testid="agency-home"
+    >
+      <header className="ag-topbar">
+        <div className="ag-topbar-in">
+          <div className="ag-wordmark">
+            <span className="dot">▦</span>Shortlist
+          </div>
+          <div className="ag-spacer" />
+          <select
+            className="ag-source"
+            aria-label="Changelog source"
+            value={source}
+            onChange={(event) => setSource(event.target.value as ScrapeSource)}
+          >
+            {SCRAPE_SOURCES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button className={fetching ? "ag-scrape-btn fetching" : "ag-scrape-btn"} type="button" onClick={fetchNotes}>
+            <span className="spin">↻</span> <span>{fetching ? "Fetching…" : "Fetch latest notes"}</span>
+          </button>
+          <div className="ag-avatar">RG</div>
+        </div>
       </header>
 
-      <section className="ac-hero">
-        <p className="ac-hero-eye">Accenture Song</p>
-        <h1>Welcome back. Your clients are ready.</h1>
-        <p className="ac-hero-lead">
-          {RELEASE_DROP.label} release {RELEASE_DROP.release} across the portfolio. Open a client environment and
-          step into their world.
+      <section className="ag-hero">
+        <p className="ag-hero-label">Agency view · Oct 2026</p>
+        <h1>What shipped. What it means.</h1>
+        <p className="ag-hero-sub">
+          Release notes filtered and ranked by what matters to each client relationship. Start with the headlines, then
+          go deep where it counts.
         </p>
       </section>
 
-      <main className="ac-body">
-        <p className="ac-qa-label">Quick access</p>
-        <div className="ac-qa">
-          <Link className="ac-qa-card" to={clientHref("aether")}>
-            <div className="ac-qa-top">
-              <div className="ac-qa-icon" aria-hidden="true">
-                ▦
-              </div>
-              <span className="ac-live">Live</span>
+      <main className="ag-body" id="agMain">
+        <div className="ag-intel" id="release-intel">
+          <div className="ag-intel-tabs">
+            <button
+              className={tab === "update" ? "ag-intel-tab active" : "ag-intel-tab"}
+              type="button"
+              onClick={() => setTab("update")}
+            >
+              What shipped
+            </button>
+            <button
+              className={tab === "trends" ? "ag-intel-tab active" : "ag-intel-tab"}
+              type="button"
+              onClick={() => setTab("trends")}
+            >
+              Industry trends
+            </button>
+            <button
+              className={tab === "sentiment" ? "ag-intel-tab active" : "ag-intel-tab"}
+              type="button"
+              onClick={() => setTab("sentiment")}
+            >
+              X.com sentiment
+            </button>
+            <div className="ag-intel-tab-spacer" />
+            <div className="ag-intel-tab-action">
+              {tab === "trends" ? (
+                <button className="ag-intel-action-btn" type="button" disabled={trendsBusy} onClick={fetchTrends}>
+                  <span>↻</span> Fetch trends
+                </button>
+              ) : null}
+              {tab === "sentiment" ? (
+                <>
+                  <span className="ag-intel-action-meta">{sentimentMeta}</span>
+                  <button className="ag-intel-action-btn" type="button" disabled={sentimentBusy} onClick={fetchSentiment}>
+                    <span>↻</span> Fetch sentiment
+                  </button>
+                </>
+              ) : null}
             </div>
-            <div>
-              <div className="ac-qa-name">{CLIENTS.aether.name}</div>
-              <div className="ac-qa-tag">{CLIENTS.aether.tag}</div>
-            </div>
-            <p className="ac-qa-desc">{CLIENTS.aether.description}</p>
-            <div className="ac-qa-meta">
-              <span>
-                <strong>{RELEASE_DROP.clients.aether.length}</strong> notes
-              </span>
-              <span>
-                <strong>{aetherTop ? `${Math.round(aetherTop.score)}%` : "—"}</strong> top feature
-              </span>
-            </div>
-            <span className="ac-open">
-              Open <span className="arr">→</span>
-            </span>
-          </Link>
+          </div>
 
-          <Link className="ac-qa-card" to={clientHref("hexworth")}>
-            <div className="ac-qa-top">
-              <div className="ac-qa-icon" aria-hidden="true">
-                ◆
-              </div>
-              <span className="ac-live">Live</span>
-            </div>
-            <div>
-              <div className="ac-qa-name">{CLIENTS.hexworth.name}</div>
-              <div className="ac-qa-tag">{CLIENTS.hexworth.tag}</div>
-            </div>
-            <p className="ac-qa-desc">{CLIENTS.hexworth.description}</p>
-            <div className="ac-qa-meta">
-              <span>
-                <strong>{RELEASE_DROP.clients.hexworth.length}</strong> notes
-              </span>
-              <span>
-                <strong>{hexworthTop ? `${Math.round(hexworthTop.score)}%` : "—"}</strong> top feature
+          <div className={tab === "update" ? "ag-intel-panel active" : "ag-intel-panel"}>
+            <div className={fetching ? "fetch-status show" : "fetch-status"}>
+              <div className="fetch-dot" />
+              <span className="fetch-status-text">{FETCH_STEPS[fetchStep]}</span>
+              <span className="fetch-status-step">
+                {fetchStep + 1} / {FETCH_STEPS.length}
               </span>
             </div>
-            <span className="ac-open">
-              Open <span className="arr">→</span>
-            </span>
-          </Link>
-        </div>
+            <div className="ag-intel-cards" data-testid="release-headlines">
+              {cards.map((card) => (
+                <article className="ag-intel-card" key={card.id}>
+                  <div className={`ag-intel-card-type ${card.type}`}>{card.type}</div>
+                  <div className="ag-intel-card-title">{card.title}</div>
+                  <div className="ag-intel-card-desc">{card.description}</div>
+                  <div className="ag-intel-card-footer">
+                    <span className="ag-intel-card-date">{card.date}</span>
+                    {card.client ? (
+                      <Link className="ag-intel-card-salient" to={clientHref(card.client)}>
+                        {CLIENTS[card.client].name}
+                      </Link>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
 
-        <div className="ac-strip" aria-label="Deliverables overview">
-          <p className="ac-strip-label">
-            Deliverables · {RELEASE_DROP.label} release {RELEASE_DROP.release}
-          </p>
-          <div className="ac-film">
-            <div className="ac-film-cell">
-              <div className="ac-film-n">{stats.notes}</div>
-              <div className="ac-film-l">Salient changes</div>
+          <div className={tab === "trends" ? "ag-intel-panel active" : "ag-intel-panel"}>
+            <div className="ag-intel-cards">
+              {trendsBusy ? <div className="ag-intel-empty">Identifying trends…</div> : null}
+              {!trendsBusy && !trends ? (
+                <div className="ag-intel-empty">
+                  No trends loaded.{" "}
+                  <button className="ag-intel-inline-btn" type="button" onClick={fetchTrends}>
+                    Fetch now
+                  </button>
+                </div>
+              ) : null}
+              {!trendsBusy && trends
+                ? trends.map((trend) => (
+                    <article className="ag-intel-card" key={trend.rank}>
+                      <div className="ag-intel-card-rank">0{trend.rank}</div>
+                      <div className="ag-intel-card-title">{trend.title}</div>
+                      <div className="ag-intel-card-desc">{trend.description}</div>
+                      <div className={`ag-intel-card-type ${trend.direction}`}>
+                        {trend.direction === "up" ? "↗ Rising" : trend.direction === "down" ? "↘ Declining" : "→ Stable"}
+                      </div>
+                    </article>
+                  ))
+                : null}
             </div>
-            <div className="ac-film-cell">
-              <div className="ac-film-n">{stats.long}</div>
-              <div className="ac-film-l">Long-term</div>
+          </div>
+
+          <div className={tab === "sentiment" ? "ag-intel-panel active" : "ag-intel-panel"}>
+            <div className="ag-sentiment-query-row">
+              <span className="ag-x-query-label">Query</span>
+              <input
+                className="ag-x-query-input"
+                type="text"
+                value={query}
+                placeholder="Topics to search on X..."
+                onChange={(event) => setQuery(event.target.value)}
+              />
             </div>
-            <div className="ac-film-cell">
-              <div className="ac-film-n">{stats.quarter}</div>
-              <div className="ac-film-l">Quarter</div>
-            </div>
-            <div className="ac-film-cell">
-              <div className="ac-film-n">{stats.daily}</div>
-              <div className="ac-film-l">Day-to-day</div>
-            </div>
-            <div className="ac-film-cell">
-              <div className="ac-film-n">{stats.clients}</div>
-              <div className="ac-film-l">Live clients</div>
+            <div className="ag-intel-cards">
+              {sentimentBusy ? <div className="ag-intel-empty">Reading signals…</div> : null}
+              {!sentimentBusy && !sentiment ? <div className="ag-intel-empty">No sentiment fetched yet.</div> : null}
+              {!sentimentBusy && sentiment
+                ? sentiment.map((signal) => (
+                    <article className="ag-intel-card" key={signal.topic}>
+                      <div className={`ag-intel-card-score ${signal.sentiment}`}>{signal.score}</div>
+                      <div className="ag-intel-card-title">{signal.topic}</div>
+                      <div className="ag-intel-card-desc">{signal.summary}</div>
+                      <div className={`ag-intel-card-type ${signal.sentiment}`}>
+                        {signal.sentiment === "pos" ? "Positive" : signal.sentiment === "neg" ? "Negative" : "Neutral"}
+                      </div>
+                    </article>
+                  ))
+                : null}
             </div>
           </div>
         </div>
 
-        <p className="ac-act-label">General release headlines</p>
-        <ul className="ac-act" data-testid="release-headlines">
-          {RELEASE_DROP.headlines.map((item) => (
-            <li key={item.id}>
-              <div>
-                <strong>{item.headline}</strong> — {item.salient}
-              </div>
-              <time>{RELEASE_DROP.label}</time>
-            </li>
-          ))}
-        </ul>
-
-        <section className="agency-ranks" aria-label="Per-client features">
-          <ClientRank clientId="aether" rows={aether.slice(0, 3)} />
-          <ClientRank clientId="hexworth" rows={hexworth.slice(0, 3)} />
-        </section>
+        <p className="ag-section-label">Client portals</p>
+        <div className="ag-clients">
+          {CLIENT_ORDER.map((id) => {
+            const copy = CARD_COPY[id];
+            const open = openReq === id;
+            return (
+              <article
+                key={id}
+                className="ag-client-card"
+                onClick={() => navigate(clientHref(id))}
+              >
+                <div className="ag-client-card-top">
+                  <h2>{CLIENTS[id].name}</h2>
+                  <div className="ag-client-badge">{clientNotes(id).length} notes</div>
+                </div>
+                <p className="ag-client-desc">{copy.description}</p>
+                <div className="ag-relevance-pills">
+                  {copy.pills.map((pill) => (
+                    <div className="ag-pill" key={pill}>
+                      {pill}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className={open ? "ag-req-toggle open" : "ag-req-toggle"}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenReq(open ? null : id);
+                  }}
+                >
+                  <span className="chevron">►</span> Client requirements
+                </button>
+                <div
+                  className={open ? "ag-req-drawer open" : "ag-req-drawer"}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="ag-req-field">
+                    <label className="ag-req-label" htmlFor={`${id}-problems`}>
+                      Problems to solve
+                    </label>
+                    <textarea
+                      className="ag-req-input"
+                      id={`${id}-problems`}
+                      rows={3}
+                      value={drafts[id].problems}
+                      placeholder={
+                        id === "aether"
+                          ? "e.g. Operations teams losing time to manual roaming calendar edits. Billing surprises eroding customer trust."
+                          : "e.g. Content partners blocked on legacy batch entitlement jobs. Support handle time too high on package confusion."
+                      }
+                      onChange={(event) =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [id]: { ...current[id], problems: event.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="ag-req-field">
+                    <label className="ag-req-label" htmlFor={`${id}-business`}>
+                      Business requirements
+                    </label>
+                    <textarea
+                      className="ag-req-input"
+                      id={`${id}-business`}
+                      rows={3}
+                      value={drafts[id].business}
+                      placeholder={
+                        id === "aether"
+                          ? "e.g. Jira plug-in compatibility, FY Q3 network ops OKR, open API readiness by Q4."
+                          : "e.g. Q3 subscriber growth target, entitlements API v2.4 partner onboarding, signed webhook reliability."
+                      }
+                      onChange={(event) =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [id]: { ...current[id], business: event.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="ag-req-footer">
+                    <button className="ag-req-save" type="button" onClick={() => saveReq(id)}>
+                      Save requirements
+                    </button>
+                    <span className={saved === id ? "ag-req-saved show" : "ag-req-saved"}>Saved</span>
+                  </div>
+                </div>
+                <div className="ag-client-card-actions">
+                  <Link className="ag-client-card-enter" to={clientHref(id)} onClick={(event) => event.stopPropagation()}>
+                    Enter portal <span className="arr">→</span>
+                  </Link>
+                  <button
+                    className="ag-client-see-all"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setTab("update");
+                      document.getElementById("release-intel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                  >
+                    See all updates ↗
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </main>
 
-      <footer className="ac-foot">
-        <strong>PulseNotes</strong> · Hackathon prototype · Fictional client brands · Accenture Song agency shell only
+      <footer className="ag-footer">
+        <strong>Shortlist</strong> · Prototype build · Fictional client brands · Accenture Song agency shell
       </footer>
-    </div>
-  );
-}
-
-function ClientRank({
-  clientId,
-  rows,
-}: {
-  clientId: ClientId;
-  rows: ReturnType<typeof clientRank>;
-}) {
-  const client = CLIENTS[clientId];
-  const lens = CLIENT_PREVIEWS[clientId];
-  return (
-    <div className="agency-rank">
-      <div className="agency-rank-head">
-        <h2>{client.name}</h2>
-        <p>
-          Most relevant · {ROLE_LABELS[lens.role]} lens
-        </p>
-      </div>
-      <ol>
-        {rows.map((row) => (
-          <li key={row.item.id}>
-            <span>{row.item.name}</span>
-            <strong>{formatScore(row.score)}</strong>
-            <p>{row.item.summary}</p>
-          </li>
-        ))}
-      </ol>
-      <Link className="ac-open" to={clientHref(clientId)}>
-        Open portal <span className="arr">→</span>
-      </Link>
     </div>
   );
 }

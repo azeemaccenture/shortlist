@@ -1,126 +1,126 @@
 import { useEffect, type ReactNode } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import type { ClientProfile } from "../data/clients";
 import { useClient } from "../portal/useClient";
 import { RoleLogin } from "./RoleLogin";
 
-const NAV = [
-  { segment: "", label: "Releases", end: true },
-  { segment: "intake", label: "Intake", end: false },
-  { segment: "catalog", label: "Catalog", end: false },
-  { segment: "shortlist", label: "Top 5", end: false },
-];
+type NavItem = { to: string; label: string; end?: boolean };
 
 function AetherMark() {
   return (
-    <svg viewBox="0 0 28 28" fill="none" aria-hidden="true">
-      <rect x="2" y="2" width="10" height="10" fill="#161616" />
-      <rect x="16" y="2" width="10" height="10" fill="#0f62fe" />
-      <rect x="2" y="16" width="10" height="10" fill="#4589ff" />
-      <rect x="16" y="16" width="10" height="10" fill="#d0e2ff" />
-    </svg>
+    <div className="ae-brand-mark" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+      <span />
+    </div>
   );
 }
 
-function HexworthMark() {
-  return (
-    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <path d="M16 2 L28 9 L28 23 L16 30 L4 23 L4 9 Z" fill="#5F5BC7" />
-      <path d="M16 2 L28 9 L16 16 L4 9 Z" fill="#4198FF" />
-      <path d="M28 9 L28 23 L16 16 Z" fill="#F75242" />
-      <path d="M4 9 L16 16 L4 23 Z" fill="#FBBD33" />
-      <path d="M16 16 L28 23 L16 30 L4 23 Z" fill="#2A603C" />
-      <path d="M16 10 L22 13.5 L16 17 L10 13.5 Z" fill="#D8D4CB" opacity="0.95" />
-    </svg>
-  );
+function navClass(base: string, isActive: boolean, label: string, pathname: string) {
+  const onDetail = pathname.includes("/items/");
+  const catalogLabel = label === "Components" || label === "Content";
+  const on = isActive || (onDetail && catalogLabel);
+  return `${base}${on ? " active" : ""}`;
 }
 
 function AetherShell({ client, children }: { client: ClientProfile; children: ReactNode }) {
   const base = `/clients/${client.id}`;
+  const { pathname } = useLocation();
+  const links: NavItem[] = [
+    { to: base, label: "Releases", end: true },
+    { to: `${base}/catalog`, label: "Components" },
+    { to: `${base}/shortlist`, label: "Network" },
+    { to: `${base}/intake`, label: "Health" },
+  ];
   return (
-    <div className="world world-aether" role="region" aria-label="Aether Dynamics client environment">
-      <div className="ae-topbar">
-        <div className="ae-topbar-in">
-          <Link className="ae-back" to="/">
-            ← Agency
+    <div id="screen-aether" className="screen active" role="region" aria-label="Aether Dynamics client environment">
+      <div className="ae-system-bar">
+        <div className="ae-system-bar-in">
+          <Link className="ae-back-btn" to="/">
+            ← Shortlist agency
           </Link>
-          <span>PulseNotes · {client.name}</span>
-          <span className="grow" />
-          <RoleLogin />
-          <span className="ae-topbar-meta">{client.meta}</span>
+          <span className="ae-sys-spacer" />
+          <span className="ae-sys-meta">Network · Q3 FY26</span>
         </div>
       </div>
-      <header className="ae-nav">
-        <div className="ae-nav-in">
-          <Link className="ae-brand" to={base}>
-            <div className="ae-mark" aria-hidden="true">
-              <AetherMark />
-            </div>
-            <div className="ae-brand-t">
-              Aether Dynamics<span>Network · Releases</span>
+      <header className="ae-product-nav">
+        <div className="ae-product-nav-in">
+          <Link className="ae-brand-block" to={base}>
+            <AetherMark />
+            <div>
+              <div className="ae-brand-name">Aether Dynamics</div>
+              <span className="ae-brand-sub">Network · Releases</span>
             </div>
           </Link>
-          <nav className="ae-links" aria-label="Aether">
-            {NAV.map((link) => (
+          <nav className="ae-nav-links" aria-label="Aether">
+            {links.map((link) => (
               <NavLink
                 key={link.label}
-                to={link.segment ? `${base}/${link.segment}` : base}
+                to={link.to}
                 end={link.end}
-                className={({ isActive }) => (isActive ? "is-on" : undefined)}
+                className={({ isActive }) => navClass("ae-nav-link", isActive, link.label, pathname)}
               >
                 {link.label}
               </NavLink>
             ))}
           </nav>
-          <Link className="ae-share" to={`${base}/shortlist`} data-testid="see-top-5">
-            See top 5
-          </Link>
+          <div className="ae-nav-end">
+            <RoleLogin />
+            <Link className="ae-share-btn" to={`${base}/shortlist`} data-testid="see-top-5">
+              Share briefing
+            </Link>
+          </div>
         </div>
       </header>
       <main>{children}</main>
-      <footer className="ae-foot">PulseNotes · Aether Dynamics environment · Prototype only · Fictional brand</footer>
+      <footer className="ae-footer">
+        <strong>Shortlist</strong> · Aether Dynamics environment · Prototype only
+      </footer>
     </div>
   );
 }
 
 function HexworthShell({ client, children }: { client: ClientProfile; children: ReactNode }) {
   const base = `/clients/${client.id}`;
+  const { pathname } = useLocation();
+  const links: NavItem[] = [
+    { to: base, label: "Releases", end: true },
+    { to: `${base}/catalog`, label: "Content" },
+    { to: `${base}/shortlist`, label: "Subscribers" },
+  ];
   return (
-    <div className="world world-hexworth" role="region" aria-label="Hexworth client environment">
+    <div id="screen-hexworth" className="screen active" role="region" aria-label="Hexworth client environment">
       <header className="hx-nav">
         <div className="hx-nav-in">
-          <Link className="hx-brand" to={base}>
-            <div className="hx-mark" aria-hidden="true">
-              <HexworthMark />
-            </div>
-            <div className="hx-brand-n">Hexworth</div>
+          <Link className="hx-brand-name" to={base}>
+            Hexworth
           </Link>
-          <nav className="hx-links" aria-label="Hexworth">
-            {NAV.map((link) => (
+          <nav className="hx-nav-links" aria-label="Hexworth">
+            {links.map((link) => (
               <NavLink
                 key={link.label}
-                to={link.segment ? `${base}/${link.segment}` : base}
+                to={link.to}
                 end={link.end}
-                className={({ isActive }) => (isActive ? "is-on" : undefined)}
+                className={({ isActive }) => navClass("hx-nav-link", isActive, link.label, pathname)}
               >
                 {link.label}
               </NavLink>
             ))}
           </nav>
-          <div className="hx-nav-end">
-            <RoleLogin />
-            <Link className="hx-agency" to="/">
-              ← Agency
-            </Link>
-            <Link className="hx-cta" to={`${base}/shortlist`} data-testid="see-top-5">
-              See top 5
-            </Link>
-          </div>
+          <div className="hx-nav-spacer" />
+          <RoleLogin />
+          <Link className="hx-back-link" to="/">
+            ← Agency
+          </Link>
+          <Link className="hx-nav-cta" to={`${base}/shortlist`} data-testid="see-top-5">
+            Share briefing
+          </Link>
         </div>
       </header>
       <main>{children}</main>
-      <footer className="hx-foot">
-        <strong>PulseNotes</strong> · Hexworth environment · Prototype only · Fictional brand
+      <footer className="hx-footer">
+        <strong>Shortlist</strong> · Hexworth environment · Prototype only
       </footer>
     </div>
   );

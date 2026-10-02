@@ -1,10 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import { ClientShell } from "../components/ClientShell";
 import { ContextSummary } from "../components/ContextSummary";
+import { RailLink, ScoreHeader, WorkLayout, useHex } from "../components/worldUi";
 import { CATALOG, findCatalogItem } from "../data/catalog";
 import { formatScore } from "../format";
-import { rankAll, scoreItem } from "../scoring/rank";
 import { useClientBase } from "../portal/useClient";
+import { rankAll, scoreItem } from "../scoring/rank";
 import { useSession } from "../state/SessionProvider";
 import { ROLE_WEIGHT_PROFILE } from "../types";
 
@@ -12,21 +13,15 @@ export function DetailPage() {
   const { id } = useParams();
   const { context } = useSession();
   const base = useClientBase();
+  const hex = useHex();
   if (!context) return null;
 
   const item = id ? findCatalogItem(id) : undefined;
   if (!item) {
     return (
       <ClientShell>
-        <section className="ae-data">
-          <div className="ae-data-in">
-            <div className="ae-data-lead">
-              <h1>Not in the catalog</h1>
-              <p>That feature is not in the seed catalog.</p>
-            </div>
-          </div>
-        </section>
-        <div className="ae-band">
+        <ScoreHeader title="Not in the catalog" lede="That feature is not in the seed catalog." stats={[]} />
+        <div className="band">
           <Link to={`${base}/catalog`}>Back to catalog</Link>
         </div>
       </ClientShell>
@@ -37,38 +32,43 @@ export function DetailPage() {
   const scored = ranked.find((row) => row.item.id === item.id) ?? scoreItem(context, item);
   const fit = scored.dimensions.find((dimension) => dimension.id === "strategicFit");
   const load = scored.dimensions.find((dimension) => dimension.id === "changeLoad");
+  const expand = hex ? "hx-note-expand open detail-copy" : "ae-note-expand open detail-copy";
 
   return (
     <ClientShell>
-      <section className="ae-data">
-        <div className="ae-data-in">
-          <div className="ae-data-lead">
-            <h1>{item.name}</h1>
-            <p>{item.cloud}. {item.summary}</p>
-          </div>
-          <div className="ae-stat"><div className="n">{formatScore(scored.score)}</div><div className="l">Score</div></div>
-          <div className="ae-stat"><div className="n">{item.effortBand}</div><div className="l">Effort</div></div>
-          <div className="ae-stat"><div className="n">{fit?.score ?? "—"}</div><div className="l">Strategic fit</div></div>
-          <div className="ae-stat"><div className="n">{load?.score ?? "—"}</div><div className="l">Change load</div></div>
-        </div>
-      </section>
-      <div className="ae-band">
+      <ScoreHeader
+        eyebrow={item.cloud}
+        title={item.name}
+        lede={item.summary}
+        stats={[
+          { n: formatScore(scored.score), l: "Score" },
+          { n: item.effortBand, l: "Effort" },
+          { n: fit?.score ?? "—", l: "Strategic fit" },
+          { n: load?.score ?? "—", l: "Change load" },
+        ]}
+      />
+      <div className="band">
         <p className="crumb">
           <Link to={`${base}/shortlist`}>Top 5</Link> · <Link to={`${base}/catalog`}>Catalog</Link>
         </p>
         <ContextSummary context={context} />
       </div>
-      <div className="ae-main">
-        <nav className="ae-filters" aria-label="View">
-          <p className="ae-filters-label">View</p>
-          <Link to={`${base}/catalog`}>Catalog</Link>
-          <Link to={`${base}/shortlist`}>Top 5</Link>
-        </nav>
-        <article className="detail-card">
-          <div className="ae-expand-grid">
+      <WorkLayout
+        label="View"
+        rail={
+          <>
+            <RailLink to={`${base}/catalog`} label="Catalog" />
+            <RailLink to={`${base}/shortlist`} label="Top 5" />
+          </>
+        }
+      >
+        <article className={hex ? "hx-note-row" : "ae-note-row"}>
+          <div className={expand}>
             <div>
               <h2>Next step</h2>
-              <p className="next-step-copy" data-testid="next-step">{scored.nextStep}</p>
+              <p className="next-step-copy" data-testid="next-step">
+                {scored.nextStep}
+              </p>
               <h2>Scoring inputs</h2>
               <ul className="factor-list">
                 <li>Cloud · {item.cloud}</li>
@@ -76,10 +76,16 @@ export function DetailPage() {
                 <li>Effort · {item.effortBand}</li>
                 <li>Related objects · {item.relatedObjectsUsed}</li>
                 <li>Package installed · {item.packageInstalled ? "yes" : "no"}</li>
-                <li>Usage last 90 days · {item.usageLast90d} (threshold {item.usageThreshold})</li>
+                <li>
+                  Usage last 90 days · {item.usageLast90d} (threshold {item.usageThreshold})
+                </li>
                 <li>Admin ready · {item.adminReady ? "yes" : "no"}</li>
-                <li>Demand · {item.demandCount} · {item.urgency} urgency</li>
-                <li>Blocker · {item.blockerFlag ? "yes" : "no"} · dependencies {item.dependencyCount}</li>
+                <li>
+                  Demand · {item.demandCount} · {item.urgency} urgency
+                </li>
+                <li>
+                  Blocker · {item.blockerFlag ? "yes" : "no"} · dependencies {item.dependencyCount}
+                </li>
                 <li>
                   Change load · {item.changeLoadBand}
                   {item.requiresDataMigration ? " · data migration" : ""}
@@ -99,9 +105,7 @@ export function DetailPage() {
                 {scored.reason}
                 {scored.contrastClause ? ` ${scored.contrastClause}` : ""}
               </p>
-              {scored.sensitiveToWeights ? (
-                <p data-testid="weight-sensitive">Sensitive to weight changes.</p>
-              ) : null}
+              {scored.sensitiveToWeights ? <p data-testid="weight-sensitive">Sensitive to weight changes.</p> : null}
               <ul className="factor-list" data-testid="dimension-breakdown">
                 {scored.dimensions.map((dimension) => (
                   <li key={dimension.id}>
@@ -113,7 +117,7 @@ export function DetailPage() {
             </div>
           </div>
         </article>
-      </div>
+      </WorkLayout>
     </ClientShell>
   );
 }
