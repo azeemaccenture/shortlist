@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shortlist — Agency Release Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; line-height: 1.5; background: #060510; }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; border: none; background: none; }
+    a { color: inherit; text-decoration: none; }
+    ul { list-style: none; }
+    :focus-visible { outline: 2px solid #A100FF; outline-offset: 3px; }
+
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: block; animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+    :root {
+      --purple: #A100FF;
+      --purple-dim: rgba(161,0,255,0.18);
+      --purple-border: rgba(161,0,255,0.3);
+      --surface: rgba(20,8,36,0.7);
+      --surface-2: rgba(30,12,50,0.6);
+      --mute: #8A7A9A;
+      --text: #E8DCF8;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      --display: "Syne", "Arial Black", sans-serif;
+    }
+
+    /* ─── AGENCY SHELL ─── */
+    #screen-agency {
+      font-family: var(--sans);
+      background:
+        radial-gradient(ellipse 80% 60% at 10% -5%, rgba(161,0,255,0.4) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 50% at 95% 15%, rgba(90,20,140,0.5) 0%, transparent 45%),
+        radial-gradient(ellipse 70% 40% at 50% 105%, rgba(50,10,80,0.45) 0%, transparent 50%),
+        linear-gradient(160deg, #1A0828 0%, #280D40 30%, #160620 60%, #0C0518 100%);
+      background-attachment: fixed;
+      color: var(--text);
+    }
+
+    .ag-topbar {
+      border-bottom: 1px solid var(--purple-border);
+      backdrop-filter: blur(12px);
+      background: rgba(10,4,20,0.6);
+      position: sticky; top:0; z-index:50;
+    }
+    .ag-topbar-in {
+      max-width: 1140px; margin: 0 auto; padding: 0 40px; height: 64px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .ag-wordmark {
+      font-family: var(--display); font-size: 15px; font-weight: 800;
+      letter-spacing: 0.03em; display: flex; align-items: center; gap: 6px;
+    }
+    .ag-wordmark .dot { color: var(--purple); font-size: 22px; line-height:0; }
+    .ag-spacer { flex: 1; }
+    .ag-scrape-btn {
+      font-family: var(--sans); font-size: 13px; font-weight: 600;
+      color: var(--purple); border: 1px solid var(--purple-border);
+      padding: 8px 16px; border-radius: 6px;
+      background: var(--purple-dim);
+      transition: background 0.2s, border-color 0.2s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ag-scrape-btn:hover { background: rgba(161,0,255,0.28); border-color: rgba(161,0,255,0.55); }
+    .ag-scrape-btn .spin { display:inline-block; }
+    .ag-scrape-btn.loading .spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ag-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid var(--purple-border); background: var(--purple-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #D4B8FF;
+    }
+
+    .ag-hero { max-width: 1140px; margin: 0 auto; padding: 64px 40px 40px; }
+    .ag-hero-label {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--mute);
+      margin-bottom: 24px;
+    }
+    .ag-hero h1 {
+      font-family: var(--display); font-size: clamp(40px,6vw,68px); font-weight: 800;
+      letter-spacing: -0.035em; line-height: 1.03; color: #fff; max-width: 16ch;
+    }
+    .ag-hero-sub {
+      margin-top: 20px; max-width: 50ch; font-size: 16px; font-weight: 400;
+      color: #B0A0C4; line-height: 1.65;
+    }
+
+    /* Release headlines strip */
+    .ag-body { max-width: 1140px; margin: 0 auto; padding: 0 40px 80px; }
+
+    .ag-section-label {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .ag-section-label::after {
+      content: ""; flex: 1; height: 1px;
+      background: linear-gradient(90deg, var(--purple-border), transparent);
+    }
+
+    .ag-headlines {
+      background: var(--surface); border: 1px solid var(--purple-border);
+      border-radius: 16px; overflow: hidden; margin-bottom: 56px;
+      backdrop-filter: blur(12px);
+    }
+    .ag-headlines-head {
+      padding: 20px 24px 16px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      border-bottom: 1px solid var(--purple-border);
+    }
+    .ag-headlines-title {
+      font-family: var(--display); font-size: 18px; font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.2;
+    }
+    .ag-headlines-meta {
+      font-family: var(--mono); font-size: 11px; color: var(--mute);
+      white-space: nowrap; padding-top: 2px;
+    }
+    .ag-headlines-body { padding: 0; }
+    .ag-headline-row {
+      display: grid; grid-template-columns: 56px 1fr auto;
+      align-items: start; gap: 16px; padding: 18px 24px;
+      border-bottom: 1px solid rgba(161,0,255,0.1);
+      transition: background 0.2s;
+    }
+    .ag-headline-row:last-child { border-bottom: none; }
+    .ag-headline-row:hover { background: rgba(161,0,255,0.07); }
+    .ag-headline-type {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 8px; border-radius: 4px; text-align: center;
+      border: 1px solid;
+    }
+    .ag-headline-type.platform { color: #C4A0FF; border-color: rgba(196,160,255,0.35); background: rgba(196,160,255,0.1); }
+    .ag-headline-type.product  { color: #80D4FF; border-color: rgba(128,212,255,0.35); background: rgba(128,212,255,0.1); }
+    .ag-headline-type.ops      { color: #80FFB8; border-color: rgba(128,255,184,0.35); background: rgba(128,255,184,0.1); }
+    .ag-headline-type.security { color: #FFD480; border-color: rgba(255,212,128,0.35); background: rgba(255,212,128,0.1); }
+    .ag-headline-main h3 {
+      font-size: 14px; font-weight: 600; color: #E8DCF8; line-height: 1.35; margin-bottom: 4px;
+    }
+    .ag-headline-main p { font-size: 13px; color: var(--mute); line-height: 1.5; }
+    .ag-headline-date {
+      font-family: var(--mono); font-size: 11px; color: var(--mute);
+      white-space: nowrap; padding-top: 2px;
+    }
+    .ag-headlines-empty {
+      padding: 32px 24px; text-align: center;
+      font-size: 14px; color: var(--mute);
+    }
+    .ag-headlines-loading {
+      padding: 32px 24px; text-align: center; font-size: 14px; color: var(--mute);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+
+    /* Client cards */
+    .ag-clients { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .ag-clients { grid-template-columns: 1fr; } }
+
+    .ag-client-card {
+      background: var(--surface); border: 1px solid var(--purple-border);
+      border-radius: 20px; padding: 28px 28px 24px;
+      backdrop-filter: blur(12px); display: flex; flex-direction: column; gap: 16px;
+      transition: border-color 0.25s, background 0.25s, transform 0.2s;
+      text-align: left; min-height: 240px;
+    }
+    .ag-client-card:hover {
+      border-color: rgba(161,0,255,0.6); background: rgba(50,22,75,0.65);
+      transform: translateY(-2px);
+    }
+    .ag-client-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .ag-client-card-top h2 {
+      font-family: var(--display); font-size: 24px; font-weight: 800;
+      letter-spacing: -0.03em; line-height: 1.1;
+    }
+    .ag-client-badge {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 5px 10px; border-radius: 999px;
+      color: #D4B8FF; background: rgba(161,0,255,0.18); border: 1px solid var(--purple-border);
+      white-space: nowrap;
+    }
+    .ag-client-desc { font-size: 14px; color: #B0A0C4; line-height: 1.55; flex: 1; }
+    .ag-client-stats { display: flex; gap: 20px; font-size: 12px; color: var(--mute); font-weight: 500; }
+    .ag-client-stats strong { color: #fff; font-weight: 700; margin-right: 4px; }
+    .ag-client-open {
+      font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+      color: #fff; display: flex; align-items: center; gap: 8px; padding: 10px 0;
+      transition: color 0.2s; align-self: flex-start;
+    }
+    .ag-client-card:hover .ag-client-open { color: #D4B8FF; }
+    .ag-client-open .arr { color: var(--purple); }
+
+    /* Relevance indicators on card */
+    .ag-relevance-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .ag-pill {
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em;
+      color: #C4A0FF; background: rgba(196,160,255,0.1); border: 1px solid rgba(196,160,255,0.25);
+    }
+
+    .ag-footer {
+      border-top: 1px solid rgba(161,0,255,0.15); padding: 24px 40px;
+      text-align: center; font-size: 11px; color: #5A4A6A; letter-spacing: 0.04em;
+    }
+    .ag-footer strong { color: #8A7A9A; }
+
+    /* Requirements drawer on client cards */
+    .ag-client-card { cursor: pointer; position: relative; }
+    .ag-client-card-enter {
+      cursor: pointer; align-self: flex-start;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+      color: #fff; display: flex; align-items: center; gap: 8px; padding: 10px 0;
+      transition: color 0.2s; background: none; border: none;
+    }
+    .ag-client-card:hover .ag-client-card-enter { color: #D4B8FF; }
+    .ag-client-card-enter .arr { color: var(--purple); }
+
+    /* Intelligence tabbed block */
+    .ag-intel {
+      background: var(--surface); border: 1px solid var(--purple-border);
+      border-radius: 16px; overflow: hidden; margin-bottom: 56px;
+      backdrop-filter: blur(12px);
+    }
+    .ag-intel-tabs {
+      display: flex; align-items: stretch; border-bottom: 1px solid var(--purple-border);
+      background: rgba(10,4,20,0.3); min-height: 48px;
+    }
+    .ag-intel-tab {
+      font-size: 13px; font-weight: 600; color: var(--mute);
+      padding: 0 20px; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: all 0.15s; white-space: nowrap;
+      display: flex; align-items: center;
+    }
+    .ag-intel-tab:hover { color: var(--text); }
+    .ag-intel-tab.active { color: var(--text); border-bottom-color: var(--purple); }
+    .ag-intel-tab-spacer { flex: 1; }
+    .ag-intel-tab-action {
+      display: flex; align-items: center; padding: 0 16px; gap: 10px;
+    }
+    .ag-intel-action-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; color: var(--purple);
+      border: 1px solid var(--purple-border); padding: 5px 12px; border-radius: 5px;
+      background: var(--purple-dim); transition: background 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ag-intel-action-btn:hover { background: rgba(161,0,255,0.28); }
+    .ag-intel-action-btn:disabled { opacity: 0.5; pointer-events: none; }
+    .ag-intel-action-meta {
+      font-family: var(--mono); font-size: 10px; color: var(--mute);
+    }
+    .ag-intel-panel { display: none; padding: 20px 24px; }
+    .ag-intel-panel.active { display: block; }
+    .ag-intel-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }
+    @media (max-width: 720px) { .ag-intel-cards { grid-template-columns: 1fr; } }
+    .ag-intel-card {
+      background: rgba(10,4,20,0.4); border: 1px solid var(--purple-border);
+      border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .ag-intel-card-type {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 7px; border-radius: 4px; border: 1px solid; align-self: flex-start;
+    }
+    .ag-intel-card-type.platform { color: #C4A0FF; border-color: rgba(196,160,255,0.3); background: rgba(196,160,255,0.08); }
+    .ag-intel-card-type.product  { color: #80D4FF; border-color: rgba(128,212,255,0.3); background: rgba(128,212,255,0.08); }
+    .ag-intel-card-type.ops      { color: #80FFB8; border-color: rgba(128,255,184,0.3); background: rgba(128,255,184,0.08); }
+    .ag-intel-card-type.security { color: #FFD480; border-color: rgba(255,212,128,0.3); background: rgba(255,212,128,0.08); }
+    .ag-intel-card-type.up       { color: #80FFB8; border-color: rgba(128,255,184,0.3); background: rgba(128,255,184,0.08); }
+    .ag-intel-card-type.flat     { color: #FFD480; border-color: rgba(255,212,128,0.3); background: rgba(255,212,128,0.08); }
+    .ag-intel-card-type.down     { color: #FF8080; border-color: rgba(255,128,128,0.3); background: rgba(255,128,128,0.08); }
+    .ag-intel-card-type.pos      { color: #80FFB8; border-color: rgba(128,255,184,0.3); background: rgba(128,255,184,0.08); }
+    .ag-intel-card-type.neu      { color: #FFD480; border-color: rgba(255,212,128,0.3); background: rgba(255,212,128,0.08); }
+    .ag-intel-card-type.neg      { color: #FF8080; border-color: rgba(255,128,128,0.3); background: rgba(255,128,128,0.08); }
+    .ag-intel-card-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; }
+    .ag-intel-card-desc  { font-size: 12px; color: var(--mute); line-height: 1.5; flex: 1; }
+    .ag-intel-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+    .ag-intel-card-date  { font-family: var(--mono); font-size: 10px; color: var(--mute); }
+    .ag-intel-card-salient {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.05em; padding: 2px 7px; border-radius: 4px;
+      background: rgba(161,0,255,0.15); color: #D4B8FF; border: 1px solid var(--purple-border);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .ag-intel-card-salient:hover { background: rgba(161,0,255,0.3); }
+    .ag-intel-card-rank  { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--purple); }
+
+    /* See all link on client cards */
+    .ag-client-see-all {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; color: var(--mute);
+      display: flex; align-items: center; gap: 5px;
+      transition: color 0.15s; padding: 2px 0;
+    }
+    .ag-client-card:hover .ag-client-see-all { color: #D4B8FF; }
+    .ag-client-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+    .ag-intel-card-score {
+      font-family: var(--display); font-size: 22px; font-weight: 800;
+      letter-spacing: -0.03em; line-height: 1;
+    }
+    .ag-intel-card-score.pos { color: #80FFB8; }
+    .ag-intel-card-score.neu { color: #FFD480; }
+    .ag-intel-card-score.neg { color: #FF8080; }
+    .ag-intel-empty {
+      grid-column: 1 / -1; padding: 28px; text-align: center;
+      font-size: 13px; color: var(--mute);
+    }
+    .ag-intel-inline-btn {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; color: var(--purple);
+      border: 1px solid var(--purple-border); padding: 4px 10px; border-radius: 4px;
+      background: var(--purple-dim); transition: background 0.15s; margin-left: 8px;
+    }
+    .ag-intel-inline-btn:hover { background: rgba(161,0,255,0.28); }
+    .ag-sentiment-query-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 0 14px; margin-bottom: 14px;
+      border-bottom: 1px solid rgba(161,0,255,0.12);
+    }
+    .ag-x-query-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute); flex-shrink: 0;
+    }
+    .ag-x-query-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-size: 13px; color: var(--text); font-family: var(--sans);
+    }
+    .ag-x-query-input::placeholder { color: var(--mute); }
+    .ag-req-toggle {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.08em; color: var(--mute); padding: 6px 0;
+      display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+      cursor: pointer; background: none; border: none; width: 100%; text-align: left;
+    }
+    .ag-req-toggle:hover { color: var(--text); }
+    .ag-req-toggle .chevron { font-size: 9px; transition: transform 0.2s; display: inline-block; }
+    .ag-req-toggle.open .chevron { transform: rotate(90deg); }
+    .ag-req-drawer {
+      display: none; padding-top: 12px;
+      border-top: 1px solid var(--purple-border); margin-top: 4px;
+    }
+    .ag-req-drawer.open { display: block; }
+    .ag-req-field { margin-bottom: 10px; }
+    .ag-req-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute);
+      display: block; margin-bottom: 5px;
+    }
+    .ag-req-input {
+      width: 100%; background: rgba(10,4,20,0.5); border: 1px solid var(--purple-border);
+      border-radius: 6px; padding: 8px 10px; font-size: 12px; color: var(--text);
+      resize: none; min-height: 52px; font-family: var(--sans); line-height: 1.5;
+      transition: border-color 0.2s;
+    }
+    .ag-req-input:focus { outline: none; border-color: var(--purple); }
+    .ag-req-input::placeholder { color: var(--mute); }
+    .ag-req-footer { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+    .ag-req-save {
+      font-size: 12px; font-weight: 700; color: #fff;
+      background: var(--purple); padding: 6px 14px; border-radius: 5px;
+      transition: background 0.15s;
+    }
+    .ag-req-save:hover { background: #8800DD; }
+    .ag-req-saved {
+      font-family: var(--mono); font-size: 11px; color: #80FFB8;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .ag-req-saved.show { opacity: 1; }
+
+    /* AI re-rank bar — shared base, themed per client */
+    .rerank-bar {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; margin-bottom: 16px;
+    }
+    .rerank-bar.ag-theme {
+      background: rgba(161,0,255,0.08); border: 1px solid var(--purple-border); border-radius: 8px;
+    }
+    .rerank-bar.ae-theme {
+      background: #edf5ff; border: 1px solid #a6c8ff;
+    }
+    .rerank-bar.hx-theme {
+      background: rgba(95,91,199,0.07); border: 1.5px solid rgba(95,91,199,0.25); border-radius: 12px;
+    }
+    .rerank-fields { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .rerank-field-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute);
+      display: block; margin-bottom: 4px;
+    }
+    .ae-theme .rerank-field-label { color: #525252; }
+    .hx-theme .rerank-field-label { color: #6B6560; }
+    .rerank-textarea {
+      width: 100%; border-radius: 5px; padding: 8px 10px;
+      font-size: 13px; resize: none; min-height: 48px;
+      font-family: var(--sans); line-height: 1.5; transition: border-color 0.2s;
+      background: rgba(10,4,20,0.4); border: 1px solid var(--purple-border); color: var(--text);
+    }
+    .rerank-textarea:focus { outline: none; border-color: var(--purple); }
+    .rerank-textarea::placeholder { color: var(--mute); }
+    .ae-theme .rerank-textarea {
+      background: #fff; border: 1px solid #c6c6c6; color: #161616; border-radius: 0;
+    }
+    .ae-theme .rerank-textarea:focus { border-color: #0f62fe; box-shadow: inset 0 -1px 0 #0f62fe; }
+    .ae-theme .rerank-textarea::placeholder { color: #8d8d8d; }
+    .hx-theme .rerank-textarea {
+      background: #FFFCFA; border: 1.5px solid #C9C3B8; color: #3D3936; border-radius: 8px;
+    }
+    .hx-theme .rerank-textarea:focus { border-color: #5F5BC7; }
+    .hx-theme .rerank-textarea::placeholder { color: #6B6560; }
+    .rerank-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; padding-top: 18px; }
+    .rerank-btn {
+      font-size: 12px; font-weight: 700; white-space: nowrap;
+      padding: 8px 14px; border-radius: 5px; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+      color: #fff; background: var(--purple);
+    }
+    .rerank-btn:hover { background: #8800DD; }
+    .rerank-btn:disabled { opacity: 0.45; pointer-events: none; }
+    .ae-theme .rerank-btn { background: #0f62fe; border-radius: 0; font-size: 13px; }
+    .ae-theme .rerank-btn:hover { background: #0043ce; }
+    .hx-theme .rerank-btn { background: #5F5BC7; border-radius: 999px; }
+    .hx-theme .rerank-btn:hover { background: #482361; }
+    .rerank-spin { display: inline-block; }
+    .rerank-btn.loading .rerank-spin { animation: spin 0.7s linear infinite; }
+    .rerank-status {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; white-space: nowrap; color: var(--mute);
+    }
+    .rerank-status.live { color: #80FFB8; }
+    .ae-theme .rerank-status.live { color: #0e6027; }
+    .hx-theme .rerank-status.live { color: #2A603C; }
+    .ai-badge {
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; padding: 2px 5px; border-radius: 3px; display: inline-block;
+      background: rgba(161,0,255,0.2); color: #D4B8FF; border: 1px solid var(--purple-border);
+    }
+    .ae-theme .ai-badge { background: #edf5ff; color: #0043ce; border-color: #a6c8ff; }
+    .hx-theme .ai-badge { background: rgba(95,91,199,0.1); color: #5F5BC7; border-color: rgba(95,91,199,0.3); }
+
+    /* ─── AUTO-FETCH STATUS ─── */
+    .ag-scrape-btn.fetching {
+      opacity: 0.7; pointer-events: none;
+    }
+    .ag-scrape-btn.fetching .spin { animation: spin 0.7s linear infinite; }
+
+    /* Fetch status bar inside headlines */
+    .fetch-status {
+      display: none; align-items: center; gap: 12px;
+      padding: 14px 24px; border-bottom: 1px solid rgba(161,0,255,0.1);
+      background: rgba(161,0,255,0.05);
+    }
+    .fetch-status.show { display: flex; }
+    .fetch-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--purple);
+      flex-shrink: 0; animation: pulse-dot 1s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.75); }
+    }
+    .fetch-status-text {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      color: #C4A0FF; letter-spacing: 0.04em;
+    }
+    .fetch-status-step {
+      font-family: var(--mono); font-size: 11px; color: var(--mute);
+      margin-left: auto;
+    }
+
+    /* Row entry animation */
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .ag-headline-row.entering {
+      animation: rowIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    /* Last-fetched badge */
+    .fetch-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 4px;
+      color: #80FFB8; background: rgba(128,255,184,0.1); border: 1px solid rgba(128,255,184,0.3);
+    }
+    .fetch-badge::before {
+      content: ""; width: 5px; height: 5px; border-radius: 50%; background: #80FFB8;
+    }
+
+    /* ══════════════════════════════════════════════
+       AETHER DYNAMICS — IBM Carbon-style product UI
+       Light, systematic, dense, data-forward
+    ══════════════════════════════════════════════ */
+    #screen-aether {
+      font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      background: #f4f4f4;
+      color: #161616;
+      min-height: 100vh;
+      --ae-blue: #0f62fe;
+      --ae-blue-hover: #0043ce;
+      --ae-blue-bg: #edf5ff;
+      --ae-blue-mid: #d0e2ff;
+      --ae-g100: #161616;
+      --ae-g90: #262626;
+      --ae-g70: #525252;
+      --ae-g50: #8d8d8d;
+      --ae-g30: #c6c6c6;
+      --ae-g20: #e0e0e0;
+      --ae-g10: #f4f4f4;
+      --ae-line: #e0e0e0;
+      --ae-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    /* Aether topbar — black Carbon-style system bar */
+    .ae-system-bar {
+      background: var(--ae-g100); color: #fff;
+      border-bottom: 1px solid #393939;
+      height: 40px; display: flex; align-items: center;
+    }
+    .ae-system-bar-in {
+      max-width: 1584px; margin: 0 auto; padding: 0 32px;
+      width: 100%; display: flex; align-items: center; gap: 24px;
+      font-size: 12px;
+    }
+    .ae-back-btn {
+      color: #fff; font-weight: 600; font-size: 12px; opacity: 0.85;
+      font-family: "IBM Plex Sans", sans-serif;
+      transition: opacity 0.15s; letter-spacing: 0.01em;
+    }
+    .ae-back-btn:hover { opacity: 1; color: #78a9ff; }
+    .ae-sys-spacer { flex: 1; }
+    .ae-sys-meta {
+      font-family: var(--ae-mono); font-size: 11px; opacity: 0.6; letter-spacing: 0.02em;
+    }
+
+    /* Aether nav — white product bar */
+    .ae-product-nav {
+      background: #fff; border-bottom: 1px solid var(--ae-line);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .ae-product-nav-in {
+      max-width: 1584px; margin: 0 auto; padding: 0 32px; height: 48px;
+      display: flex; align-items: stretch; gap: 0;
+    }
+    .ae-brand-block {
+      display: flex; align-items: center; gap: 12px; padding-right: 32px;
+      border-right: 1px solid var(--ae-line); margin-right: 4px; flex-shrink: 0;
+    }
+    .ae-brand-mark {
+      width: 28px; height: 28px; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 2px; flex-shrink: 0;
+    }
+    .ae-brand-mark span {
+      display: block;
+    }
+    .ae-brand-mark span:nth-child(1) { background: #161616; }
+    .ae-brand-mark span:nth-child(2) { background: #0f62fe; }
+    .ae-brand-mark span:nth-child(3) { background: #4589ff; }
+    .ae-brand-mark span:nth-child(4) { background: #d0e2ff; }
+    .ae-brand-name {
+      font-size: 14px; font-weight: 600; color: var(--ae-g100); line-height: 1.2;
+    }
+    .ae-brand-sub {
+      font-family: var(--ae-mono); font-size: 10px; color: var(--ae-g50);
+      letter-spacing: 0.06em; margin-top: 2px; display: block;
+    }
+    .ae-nav-links { display: flex; align-items: stretch; flex: 1; }
+    .ae-nav-link {
+      font-size: 14px; color: var(--ae-g70); padding: 0 16px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      display: flex; align-items: center;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .ae-nav-link.active { color: var(--ae-g100); font-weight: 600; border-bottom-color: var(--ae-blue); }
+    .ae-nav-link:hover { color: var(--ae-g100); }
+    .ae-nav-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+    /* Persona toggle — Carbon tab style */
+    .ae-persona-tabs {
+      display: flex; height: 100%; align-items: stretch;
+      border-left: 1px solid var(--ae-line); margin-left: 16px;
+    }
+    .ae-persona-tab {
+      font-size: 13px; font-weight: 400; color: var(--ae-g70);
+      padding: 0 16px; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; display: flex; align-items: center;
+      transition: all 0.15s; white-space: nowrap; border-radius: 0;
+    }
+    .ae-persona-tab.active {
+      color: var(--ae-g100); font-weight: 600; border-bottom-color: var(--ae-blue);
+      background: var(--ae-blue-bg);
+    }
+    .ae-persona-tab:hover:not(.active) { color: var(--ae-g100); background: var(--ae-g10); }
+
+    .ae-share-btn {
+      background: var(--ae-blue); color: #fff; font-size: 14px;
+      padding: 0 16px; height: 40px; display: flex; align-items: center;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .ae-share-btn:hover { background: var(--ae-blue-hover); }
+
+    /* Aether data header — grid with blue top accent */
+    .ae-data-header {
+      background: #fff; border-bottom: 1px solid var(--ae-line);
+      position: relative;
+    }
+    .ae-data-header::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--ae-blue) 0 80px, var(--ae-mid, #d0e2ff) 80px 120px, transparent 120px);
+    }
+    .ae-data-header::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.35;
+      background-image: linear-gradient(rgba(22,22,22,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(22,22,22,0.04) 1px,transparent 1px);
+      background-size: 16px 16px;
+    }
+    .ae-data-header-in {
+      max-width: 1584px; margin: 0 auto; padding: 28px 32px;
+      display: grid; grid-template-columns: 1.6fr repeat(4,1fr); gap: 16px;
+      align-items: end; position: relative; z-index: 1;
+    }
+    .ae-data-lead h1 {
+      font-size: clamp(18px,2vw,24px); font-weight: 300; color: var(--ae-g100);
+      line-height: 1.25; margin-bottom: 6px; letter-spacing: 0;
+    }
+    .ae-data-lead p { font-size: 13px; color: var(--ae-g70); line-height: 1.5; max-width: 44ch; }
+    .ae-kpi { border-left: 1px solid var(--ae-line); padding-left: 16px; }
+    .ae-kpi .n { font-size: 28px; font-weight: 300; color: var(--ae-g100); line-height: 1; letter-spacing: 0; }
+    .ae-kpi .n em { font-style: normal; color: var(--ae-blue); font-size: 0.55em; vertical-align: super; margin-left: 2px; font-weight: 600; }
+    .ae-kpi .l { margin-top: 6px; font-family: var(--ae-mono); font-size: 10px; font-weight: 600; color: var(--ae-g50); letter-spacing: 0.06em; }
+
+    /* Aether persona context — light bordered panel */
+    .ae-persona-panel {
+      background: var(--ae-blue-bg); border: 1px solid var(--ae-blue-mid);
+      padding: 16px 20px; margin: 0 32px 0;
+      max-width: 1584px; margin-left: auto; margin-right: auto;
+      border-top: none;
+    }
+    .ae-persona-panel-in {
+      max-width: 1584px; margin: 0 auto; padding: 16px 32px;
+      display: flex; gap: 48px; align-items: flex-start;
+    }
+    .ae-persona-field { flex: 1; }
+    .ae-persona-field-label {
+      font-family: var(--ae-mono); font-size: 10px; font-weight: 600;
+      color: var(--ae-g50); letter-spacing: 0.08em; margin-bottom: 4px; display: block;
+    }
+    .ae-persona-field-value { font-size: 13px; color: var(--ae-g100); line-height: 1.4; }
+    .ae-persona-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .ae-persona-tag {
+      font-family: var(--ae-mono); font-size: 10px;
+      padding: 2px 7px; background: var(--ae-blue-mid); color: #0043ce;
+      border: 1px solid #a6c8ff;
+    }
+
+    /* Aether main layout */
+    .ae-main-layout {
+      max-width: 1584px; margin: 0 auto; padding: 24px 32px 64px;
+      display: grid; grid-template-columns: 224px 1fr; gap: 24px;
+    }
+
+    /* Aether filter sidebar — Carbon left-nav style */
+    .ae-sidebar { position: sticky; top: 88px; align-self: start; }
+    .ae-sidebar-label {
+      font-family: var(--ae-mono); font-size: 10px; font-weight: 600;
+      color: var(--ae-g50); letter-spacing: 0.08em; padding: 12px 16px 6px;
+      background: #fff; border: 1px solid var(--ae-line); border-bottom: none;
+    }
+    .ae-filter-item {
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; text-align: left; padding: 11px 16px;
+      font-size: 14px; color: var(--ae-g70); border-radius: 0;
+      background: #fff; border: 1px solid var(--ae-line); border-top: none;
+      border-left: 3px solid transparent;
+      transition: all 0.12s;
+    }
+    .ae-filter-item:hover { color: var(--ae-g100); background: var(--ae-g10); }
+    .ae-filter-item.active {
+      color: var(--ae-g100); font-weight: 600;
+      border-left-color: var(--ae-blue); background: var(--ae-blue-bg);
+    }
+    .ae-filter-cnt {
+      font-family: var(--ae-mono); font-size: 11px; color: var(--ae-g50);
+      background: var(--ae-g10); padding: 1px 7px; min-width: 24px; text-align: center;
+    }
+    .ae-filter-item.active .ae-filter-cnt { color: var(--ae-blue-hover); background: var(--ae-blue-mid); }
+
+    /* Aether feed */
+    .ae-feed-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 12px;
+    }
+    .ae-feed-top h2 { font-size: 18px; font-weight: 600; color: var(--ae-g100); }
+    .ae-search-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: #fff; border-bottom: 1px solid var(--ae-g100);
+      padding: 8px 0; min-width: 240px;
+    }
+    .ae-search-bar:focus-within { border-bottom-color: var(--ae-blue); box-shadow: inset 0 -1px 0 var(--ae-blue); }
+    .ae-search-bar svg { width: 16px; height: 16px; color: var(--ae-g50); flex-shrink: 0; }
+    .ae-search-bar input { border: none; outline: none; background: transparent; width: 100%; font-size: 14px; color: var(--ae-g100); }
+    .ae-search-bar input::placeholder { color: var(--ae-g50); }
+
+    /* Aether note rows — Carbon data-table style */
+    .ae-note-row {
+      background: #fff; border: none;
+      border-bottom: 1px solid var(--ae-line);
+      width: 100%; text-align: left; overflow: hidden;
+      transition: background 0.12s;
+    }
+    .ae-note-row:first-child { border-top: 1px solid var(--ae-line); }
+    .ae-note-row:hover { background: var(--ae-g10); }
+    .ae-note-row-main {
+      display: grid; grid-template-columns: 96px 1fr 64px;
+      align-items: start; gap: 16px; padding: 14px 16px;
+    }
+    .ae-tier-tag {
+      font-family: var(--ae-mono); font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; padding: 3px 7px; text-align: center;
+    }
+    .ae-tier-tag.long    { background: #f6f2ff; color: #6929c4; border: 1px solid #d4bbff; }
+    .ae-tier-tag.quarter { background: #edf5ff; color: #0043ce; border: 1px solid #a6c8ff; }
+    .ae-tier-tag.daily   { background: #defbe6; color: #0e6027; border: 1px solid #a7f0ba; }
+    .ae-note-title { font-size: 14px; font-weight: 600; color: var(--ae-g100); margin-bottom: 3px; line-height: 1.3; }
+    .ae-note-excerpt { font-size: 13px; color: var(--ae-g70); line-height: 1.45; }
+    .ae-note-chips { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+    .ae-note-chip {
+      font-family: var(--ae-mono); font-size: 10px; color: var(--ae-g50);
+      background: var(--ae-g10); border: 1px solid var(--ae-g30); padding: 2px 6px;
+    }
+    .ae-note-score { text-align: right; }
+    .ae-note-score .n { font-size: 22px; font-weight: 300; color: var(--ae-g100); line-height: 1; letter-spacing: 0; }
+    .ae-note-score .n em { font-style: normal; font-size: 0.5em; color: var(--ae-blue); vertical-align: super; font-weight: 600; }
+    .ae-note-score .l { font-family: var(--ae-mono); font-size: 9px; color: var(--ae-g50); letter-spacing: 0.06em; }
+
+    .ae-note-expand {
+      background: #f4f4f4; border-top: 1px solid var(--ae-line);
+      border-left: 4px solid var(--ae-blue); padding: 20px 24px; display: none;
+    }
+    .ae-note-expand.open { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; animation: fadeUp 0.2s ease; }
+    .ae-note-expand h4 {
+      font-family: var(--ae-mono); font-size: 10px; font-weight: 600;
+      color: var(--ae-g50); letter-spacing: 0.1em; margin-bottom: 8px;
+    }
+    .ae-note-expand p { font-size: 13px; color: var(--ae-g90); line-height: 1.6; }
+    .ae-note-expand ul li {
+      font-size: 13px; color: var(--ae-g90); line-height: 1.5;
+      padding: 3px 0 3px 14px; position: relative;
+    }
+    .ae-note-expand ul li::before {
+      content: ""; position: absolute; left: 0; top: 9px;
+      width: 4px; height: 4px; background: var(--ae-blue);
+    }
+    .ae-note-expand-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .ae-btn-ghost {
+      font-size: 13px; color: var(--ae-g70); border: 1px solid var(--ae-g30);
+      padding: 7px 14px; transition: all 0.12s;
+    }
+    .ae-btn-ghost:hover { color: var(--ae-g100); border-color: var(--ae-g100); background: var(--ae-g10); }
+    .ae-btn-primary {
+      font-size: 13px; color: #fff; background: var(--ae-blue); padding: 7px 16px;
+      transition: background 0.12s;
+    }
+    .ae-btn-primary:hover { background: var(--ae-blue-hover); }
+
+    .ae-empty { padding: 48px; text-align: center; font-size: 14px; color: var(--ae-g50); display: none; }
+    .ae-empty.show { display: block; }
+    .ae-footer {
+      background: var(--ae-g100); color: #6f6f6f; padding: 16px 32px;
+      font-family: var(--ae-mono); font-size: 11px; letter-spacing: 0.04em;
+    }
+    .ae-footer strong { color: #a8a8a8; }
+
+    /* ══════════════════════════════════════════════
+       HEXWORTH — Editorial serif, bold colour, vivid
+       Warm ink background, italic display, multicolour
+    ══════════════════════════════════════════════ */
+    #screen-hexworth {
+      font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      background: #FFFCFA;
+      color: #3D3936;
+      min-height: 100vh;
+      --hx-serif: "Newsreader", Georgia, serif;
+      --hx-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      --hx-mono: "IBM Plex Mono", ui-monospace, monospace;
+      --hx-ink: #3D3936;
+      --hx-paper: #FFFCFA;
+      --hx-soft: #EDE9E0;
+      --hx-mute: #6B6560;
+      --hx-line: #C9C3B8;
+      --hx-violet: #5F5BC7;
+      --hx-sky: #4198FF;
+      --hx-coral: #F75242;
+      --hx-gold: #FBBD33;
+      --hx-green: #2A603C;
+      --hx-plum: #482361;
+      --hx-navy: #1D4498;
+    }
+
+    /* Hexworth nav — ink background, rainbow border */
+    .hx-nav {
+      background: var(--hx-ink); color: #fff;
+      border-bottom: 4px solid transparent;
+      border-image: linear-gradient(90deg, var(--hx-violet), var(--hx-sky), var(--hx-coral), var(--hx-gold), var(--hx-green)) 1;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .hx-nav-in {
+      max-width: 1180px; margin: 0 auto; padding: 0 40px; height: 64px;
+      display: flex; align-items: center; gap: 24px;
+    }
+    .hx-brand-name {
+      font-family: var(--hx-serif); font-size: 22px; font-weight: 600;
+      font-style: italic; letter-spacing: -0.02em; flex-shrink: 0;
+    }
+    .hx-nav-links { display: flex; gap: 4px; }
+    .hx-nav-link {
+      font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6);
+      padding: 7px 12px; border-radius: 999px; transition: all 0.15s;
+    }
+    .hx-nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .hx-nav-link:hover { color: #fff; }
+    .hx-nav-spacer { flex: 1; }
+    .hx-back-link {
+      font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7);
+      border: 1.5px solid rgba(255,255,255,0.35); padding: 7px 14px; border-radius: 999px;
+      transition: all 0.15s;
+    }
+    .hx-back-link:hover { color: #fff; border-color: #fff; background: rgba(255,255,255,0.08); }
+    .hx-nav-cta {
+      background: var(--hx-violet); color: #fff; font-weight: 700; font-size: 13px;
+      padding: 9px 18px; border-radius: 999px; transition: background 0.15s;
+    }
+    .hx-nav-cta:hover { background: var(--hx-plum); }
+
+    /* Persona toggle — pill style on ink */
+    .hx-persona-pills {
+      display: flex; gap: 3px;
+      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 999px; padding: 3px;
+    }
+    .hx-persona-pill {
+      font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55);
+      padding: 5px 14px; border-radius: 999px; transition: all 0.2s; white-space: nowrap;
+    }
+    .hx-persona-pill.active { background: #fff; color: var(--hx-violet); }
+    .hx-persona-pill:hover:not(.active) { color: #fff; }
+
+    /* Hexworth hero — vivid gradient with conic accent */
+    .hx-hero {
+      background: linear-gradient(135deg, var(--hx-violet) 0%, var(--hx-plum) 42%, var(--hx-navy) 100%);
+      color: #fff; position: relative; overflow: hidden;
+    }
+    .hx-hero::before {
+      content: ""; position: absolute; top: -10%; right: -8%;
+      width: 52%; height: 130%;
+      background: conic-gradient(from 210deg at 60% 40%,
+        rgba(95,91,199,0) 0deg, rgba(65,152,255,0.35) 60deg,
+        rgba(247,82,66,0.35) 140deg, rgba(251,189,51,0.4) 220deg,
+        rgba(42,96,60,0.35) 300deg, rgba(95,91,199,0) 360deg);
+      clip-path: polygon(22% 0, 100% 0, 100% 100%, 0 100%, 14% 55%);
+      opacity: 0.85; pointer-events: none;
+    }
+    .hx-hero-in {
+      max-width: 1180px; margin: 0 auto; padding: 56px 40px 48px;
+      display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 40px;
+      align-items: end; position: relative; z-index: 1;
+    }
+    .hx-hero-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+      opacity: 0.85; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .hx-hero-eyebrow::before {
+      content: ""; width: 28px; height: 4px; border-radius: 2px;
+      background: linear-gradient(90deg, var(--hx-gold), var(--hx-coral), var(--hx-sky));
+    }
+    .hx-hero h1 {
+      font-family: var(--hx-serif); font-size: clamp(30px,4.5vw,48px); font-weight: 600;
+      font-style: italic; letter-spacing: -0.025em; line-height: 1.1; max-width: 18ch; margin-bottom: 16px;
+    }
+    .hx-hero-sub { font-size: 15px; font-weight: 500; line-height: 1.55; max-width: 44ch; opacity: 0.92; }
+    .hx-hero-fig { text-align: right; padding-bottom: 8px; }
+    .hx-hero-big {
+      font-family: var(--hx-serif); font-size: clamp(64px,10vw,108px); font-weight: 600;
+      font-style: italic; letter-spacing: -0.04em; line-height: 0.9;
+      background: linear-gradient(135deg, #fff 20%, var(--hx-gold) 55%, var(--hx-coral) 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+    }
+    .hx-hero-fig-lbl {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.88; margin-top: 10px;
+      -webkit-text-fill-color: #fff; color: #fff;
+    }
+
+    /* Hexworth persona bar — warm paper */
+    .hx-persona-bar { background: var(--hx-soft); border-bottom: 1px solid var(--hx-line); }
+    .hx-persona-bar-in {
+      max-width: 1180px; margin: 0 auto; padding: 16px 40px;
+      display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap;
+    }
+    .hx-pfield { flex: 1; min-width: 160px; }
+    .hx-pfield-label {
+      font-family: var(--hx-mono); font-size: 10px; font-weight: 600;
+      color: var(--hx-mute); letter-spacing: 0.1em; margin-bottom: 4px; display: block;
+    }
+    .hx-pfield-value { font-size: 13px; color: var(--hx-ink); line-height: 1.4; }
+    .hx-ptags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .hx-ptag {
+      font-family: var(--hx-mono); font-size: 10px; font-weight: 600;
+      padding: 3px 8px; border-radius: 999px;
+      background: rgba(95,91,199,0.12); color: var(--hx-violet); border: 1px solid rgba(95,91,199,0.3);
+    }
+
+    /* Hexworth main layout */
+    .hx-main-layout {
+      max-width: 1180px; margin: 0 auto; padding: 36px 40px 72px;
+      display: grid; grid-template-columns: 180px 1fr; gap: 36px;
+    }
+
+    /* Hexworth sidebar — borderless rail */
+    .hx-rail { position: sticky; top: 80px; align-self: start; }
+    .hx-rail-btn {
+      width: 100%; text-align: left; padding: 12px 14px;
+      font-size: 14px; font-weight: 700; color: var(--hx-mute);
+      border-left: 3px solid transparent; border-radius: 0 12px 12px 0;
+      transition: all 0.15s; margin-bottom: 2px; display: flex;
+      justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .hx-rail-btn small { display: block; font-size: 10px; font-weight: 600; color: #9A948A; margin-top: 1px; font-family: var(--hx-mono); }
+    .hx-rail-btn:hover { color: var(--hx-ink); background: var(--hx-soft); }
+    .hx-rail-btn.active { color: var(--hx-ink); background: var(--hx-paper); border-left-color: var(--hx-violet); }
+    .hx-rail-btn.active small { color: var(--hx-violet); }
+
+    /* Hexworth feed */
+    .hx-feed-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .hx-feed-top h2 {
+      font-family: var(--hx-serif); font-size: 26px; font-weight: 600;
+      font-style: italic; letter-spacing: -0.02em; color: var(--hx-ink);
+    }
+    .hx-search-wrap {
+      display: flex; align-items: center; gap: 8px;
+      border: 1.5px solid var(--hx-line); padding: 9px 14px; min-width: 200px;
+      border-radius: 999px; background: var(--hx-paper);
+    }
+    .hx-search-wrap:focus-within { border-color: var(--hx-violet); }
+    .hx-search-wrap svg { width: 14px; height: 14px; color: var(--hx-mute); flex-shrink: 0; }
+    .hx-search-wrap input { border: none; outline: none; background: transparent; width: 100%; font-size: 14px; font-weight: 600; color: var(--hx-ink); }
+    .hx-search-wrap input::placeholder { color: var(--hx-mute); font-weight: 400; }
+
+    /* Hexworth note rows */
+    .hx-note-row {
+      background: var(--hx-paper); border: 1.5px solid var(--hx-line);
+      border-radius: 16px; margin-bottom: 10px; overflow: hidden;
+      transition: border-color 0.15s, box-shadow 0.15s; text-align: left; width: 100%;
+    }
+    .hx-note-row:hover { border-color: var(--hx-violet); box-shadow: 0 4px 16px rgba(95,91,199,0.1); }
+    .hx-note-row-main {
+      display: grid; grid-template-columns: 92px 1fr 72px;
+      align-items: start; gap: 16px; padding: 18px 20px;
+    }
+    .hx-tier-pill {
+      font-family: var(--hx-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; padding: 5px 8px; border-radius: 999px;
+      text-align: center; border: 1.5px solid;
+    }
+    .hx-tier-pill.long    { color: var(--hx-violet); border-color: rgba(95,91,199,0.4); background: rgba(95,91,199,0.08); }
+    .hx-tier-pill.quarter { color: var(--hx-navy);   border-color: rgba(29,68,152,0.35); background: rgba(29,68,152,0.07); }
+    .hx-tier-pill.daily   { color: var(--hx-green);  border-color: rgba(42,96,60,0.35);  background: rgba(42,96,60,0.07); }
+    .hx-note-title { font-size: 14px; font-weight: 600; color: var(--hx-ink); margin-bottom: 4px; line-height: 1.35; }
+    .hx-note-excerpt { font-size: 13px; color: var(--hx-mute); line-height: 1.5; }
+    .hx-note-chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .hx-note-chip {
+      font-family: var(--hx-mono); font-size: 10px; color: var(--hx-mute);
+      background: var(--hx-soft); border: 1px solid var(--hx-line); padding: 2px 7px; border-radius: 4px;
+    }
+    .hx-note-score { text-align: right; }
+    .hx-note-score .n {
+      font-family: var(--hx-serif); font-size: 26px; font-weight: 600;
+      font-style: italic; color: var(--hx-ink); line-height: 1; letter-spacing: -0.02em;
+    }
+    .hx-note-score .n em { font-style: normal; font-size: 0.5em; color: var(--hx-violet); vertical-align: super; font-weight: 700; }
+    .hx-note-score .l { font-family: var(--hx-mono); font-size: 9px; color: var(--hx-mute); letter-spacing: 0.08em; }
+
+    .hx-note-expand {
+      background: var(--hx-soft); border-top: 1.5px solid var(--hx-line);
+      border-left: 4px solid var(--hx-violet); padding: 20px 24px; display: none;
+    }
+    .hx-note-expand.open { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; animation: fadeUp 0.2s ease; }
+    .hx-note-expand h4 {
+      font-family: var(--hx-mono); font-size: 10px; font-weight: 600;
+      color: var(--hx-mute); letter-spacing: 0.12em; margin-bottom: 8px;
+    }
+    .hx-note-expand p { font-size: 13px; color: var(--hx-ink); line-height: 1.65; }
+    .hx-note-expand ul li {
+      font-size: 13px; color: var(--hx-ink); line-height: 1.55;
+      padding: 3px 0 3px 14px; position: relative;
+    }
+    .hx-note-expand ul li::before {
+      content: ""; position: absolute; left: 0; top: 9px;
+      width: 5px; height: 5px; border-radius: 50%; background: var(--hx-violet);
+    }
+    .hx-note-expand-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .hx-btn-ghost {
+      font-size: 12px; font-weight: 700; color: var(--hx-mute);
+      border: 1.5px solid var(--hx-line); padding: 7px 14px; border-radius: 999px; transition: all 0.15s;
+    }
+    .hx-btn-ghost:hover { color: var(--hx-ink); border-color: var(--hx-ink); }
+    .hx-btn-primary {
+      font-size: 12px; font-weight: 700; color: #fff;
+      background: var(--hx-violet); padding: 7px 18px; border-radius: 999px; transition: background 0.15s;
+    }
+    .hx-btn-primary:hover { background: var(--hx-plum); }
+
+    .hx-empty { padding: 48px; text-align: center; font-size: 14px; color: var(--hx-mute); display: none; }
+    .hx-empty.show { display: block; }
+    .hx-footer {
+      background: var(--hx-ink); color: #6B6560; padding: 20px 40px;
+      text-align: center; font-size: 11px; letter-spacing: 0.04em;
+    }
+    .hx-footer strong { color: #9A948A; }
+
+    /* Shared responsive */
+    @media (max-width: 900px) {
+      .ae-main-layout, .hx-main-layout { grid-template-columns: 1fr; }
+      .ae-sidebar, .hx-rail { position: static; display: flex; flex-wrap: wrap; gap: 4px; }
+      .ae-filter-item, .hx-rail-btn { width: auto; border-left: none; border-bottom: 2px solid transparent; }
+      .ae-filter-item.active { border-left: none; border-bottom-color: var(--ae-blue); }
+      .hx-rail-btn.active { border-left: none; border-bottom-color: var(--hx-violet); }
+      .ae-data-header-in { grid-template-columns: 1fr 1fr; }
+      .hx-hero-in { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .ae-product-nav-in, .hx-nav-in, .ae-main-layout, .hx-main-layout, .ae-data-header-in, .hx-hero-in, .hx-persona-bar-in { padding-left: 20px; padding-right: 20px; }
+      .ae-note-row-main, .hx-note-row-main { grid-template-columns: 72px 1fr; }
+      .ae-note-score, .hx-note-score { display: none; }
+      .ae-note-expand.open, .hx-note-expand.open { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+
+<!-- SCREEN 1: AGENCY DASHBOARD -->
+<div class="screen active" id="screen-agency">
+  <header class="ag-topbar">
+    <div class="ag-topbar-in">
+      <div class="ag-wordmark">
+        <span class="dot">&#9646;</span>Shortlist
+      </div>
+      <div class="ag-spacer"></div>
+      <select id="scrapeSource" style="background:rgba(10,4,20,0.6);border:1px solid var(--purple-border);border-radius:6px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--mute);font-family:var(--mono);letter-spacing:0.04em;cursor:pointer;">
+        <option value="saas">SaaS platform</option>
+        <option value="api">API / developer tool</option>
+        <option value="ds">Design system</option>
+        <option value="infra">Infrastructure</option>
+        <option value="media">Streaming / media</option>
+      </select>
+      <button class="ag-scrape-btn" id="openScrapeBtn" type="button">
+        <span class="spin" id="scrapeSpinIcon">&#8635;</span> <span id="scrapeBtnLabel">Fetch latest notes</span>
+      </button>
+      <div class="ag-avatar">RG</div>
+    </div>
+  </header>
+
+  <section class="ag-hero">
+    <p class="ag-hero-label">Agency view &middot; Oct 2026</p>
+    <h1>What shipped. What it means.</h1>
+    <p class="ag-hero-sub">Release notes filtered and ranked by what matters to each client relationship. Start with the headlines, then go deep where it counts.</p>
+  </section>
+
+  <main class="ag-body" id="agMain">
+
+    <div class="ag-intel">
+      <div class="ag-intel-tabs">
+        <button class="ag-intel-tab active" type="button" data-tab="update">What shipped</button>
+        <button class="ag-intel-tab" type="button" data-tab="trends">Industry trends</button>
+        <button class="ag-intel-tab" type="button" data-tab="sentiment">X.com sentiment</button>
+        <div class="ag-intel-tab-spacer"></div>
+        <div class="ag-intel-tab-action" id="agIntelAction"></div>
+      </div>
+
+      <!-- Update summary panel -->
+      <div class="ag-intel-panel active" id="tabUpdate">
+        <div class="fetch-status" id="fetchStatus" style="margin:-20px -24px 16px;border-radius:0;border-left:none;border-right:none;border-top:none;">
+          <div class="fetch-dot"></div>
+          <span class="fetch-status-text" id="fetchStatusText">Connecting to changelog&hellip;</span>
+          <span class="fetch-status-step" id="fetchStatusStep">1 / 4</span>
+        </div>
+        <div class="ag-intel-cards" id="agUpdateCards">
+          <div class="ag-intel-card">
+            <div class="ag-intel-card-type platform">Platform</div>
+            <div class="ag-intel-card-title">Multi-year 5G orchestration platform</div>
+            <div class="ag-intel-card-desc">Unified service graph across radio, core, edge, and partner networks. Foundation for resilient growth.</div>
+            <div class="ag-intel-card-footer">
+              <span class="ag-intel-card-date">28 Sep 2026</span>
+              <span class="ag-intel-card-salient" data-client="aether">Aether Dynamics</span>
+            </div>
+          </div>
+          <div class="ag-intel-card">
+            <div class="ag-intel-card-type product">Product</div>
+            <div class="ag-intel-card-title">Streaming entitlements API v2.4</div>
+            <div class="ag-intel-card-desc">Flexible content-package access and entitlement-preview endpoints for content partners.</div>
+            <div class="ag-intel-card-footer">
+              <span class="ag-intel-card-date">29 Sep 2026</span>
+              <span class="ag-intel-card-salient" data-client="hexworth">Hexworth</span>
+            </div>
+          </div>
+          <div class="ag-intel-card">
+            <div class="ag-intel-card-type security">Security</div>
+            <div class="ag-intel-card-title">Partner hub — signed payloads</div>
+            <div class="ag-intel-card-desc">Exponential backoff, dead-letter queue, and signed payloads for content and entitlement events.</div>
+            <div class="ag-intel-card-footer">
+              <span class="ag-intel-card-date">27 Sep 2026</span>
+              <span class="ag-intel-card-salient" data-client="hexworth">Hexworth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trends panel -->
+      <div class="ag-intel-panel" id="tabTrends">
+        <div class="ag-intel-cards" id="agTrendCards">
+          <div class="ag-intel-empty">No trends loaded. <button class="ag-intel-inline-btn" type="button" id="agTrendsFetchBtn">Fetch now</button></div>
+        </div>
+      </div>
+
+      <!-- Sentiment panel -->
+      <div class="ag-intel-panel" id="tabSentiment">
+        <div class="ag-sentiment-query-row">
+          <span class="ag-x-query-label">Query</span>
+          <input class="ag-x-query-input" id="agXQuery" type="text" value="release notes software product management" placeholder="Topics to search on X..." />
+        </div>
+        <div class="ag-intel-cards" id="agSentimentCards">
+          <div class="ag-intel-empty">No sentiment fetched yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="ag-section-label">Client portals</p>
+    <div class="ag-clients">
+      <div class="ag-client-card" data-enter="aether">
+        <div class="ag-client-card-top">
+          <h2>Aether Dynamics</h2>
+          <div class="ag-client-badge">6 notes</div>
+        </div>
+        <p class="ag-client-desc">Network intelligence platform. Multi-year 5G orchestration, network operations console modernisation, and open API readiness.</p>
+        <div class="ag-relevance-pills">
+          <div class="ag-pill">5G Orchestration</div>
+          <div class="ag-pill">Network Ops</div>
+          <div class="ag-pill">Open API</div>
+        </div>
+        <button class="ag-req-toggle" type="button" data-req-toggle="aether" onclick="event.stopPropagation()">
+          <span class="chevron">&#9658;</span> Client requirements
+        </button>
+        <div class="ag-req-drawer" id="aeReqDrawer" onclick="event.stopPropagation()">
+          <div class="ag-req-field">
+            <label class="ag-req-label" for="aeReqProblems">Problems to solve</label>
+            <textarea class="ag-req-input" id="aeReqProblems" placeholder="e.g. Operations teams losing time to manual roaming calendar edits. Billing surprises eroding customer trust." rows="3"></textarea>
+          </div>
+          <div class="ag-req-field">
+            <label class="ag-req-label" for="aeReqBusiness">Business requirements</label>
+            <textarea class="ag-req-input" id="aeReqBusiness" placeholder="e.g. Jira plug-in compatibility, FY Q3 network ops OKR, open API readiness by Q4." rows="3"></textarea>
+          </div>
+          <div class="ag-req-footer">
+            <button class="ag-req-save" type="button" data-req-save="aether">Save requirements</button>
+            <span class="ag-req-saved" id="aeReqSaved">Saved</span>
+          </div>
+        </div>
+        <div class="ag-client-card-actions">
+          <div class="ag-client-card-enter">Enter portal <span class="arr">&#8594;</span></div>
+          <button class="ag-client-see-all" type="button" data-see-all="aether" onclick="event.stopPropagation()">See all updates &#8599;</button>
+        </div>
+      </div>
+
+      <div class="ag-client-card" data-enter="hexworth">
+        <div class="ag-client-card-top">
+          <h2>Hexworth</h2>
+          <div class="ag-client-badge">7 notes</div>
+        </div>
+        <p class="ag-client-desc">Streaming and media platform. Subscriber identity, content entitlements API, and partner hub reliability for Q3 growth targets.</p>
+        <div class="ag-relevance-pills">
+          <div class="ag-pill">Streaming API</div>
+          <div class="ag-pill">Entitlements</div>
+          <div class="ag-pill">Partner Hub</div>
+        </div>
+        <button class="ag-req-toggle" type="button" data-req-toggle="hexworth" onclick="event.stopPropagation()">
+          <span class="chevron">&#9658;</span> Client requirements
+        </button>
+        <div class="ag-req-drawer" id="hxReqDrawer" onclick="event.stopPropagation()">
+          <div class="ag-req-field">
+            <label class="ag-req-label" for="hxReqProblems">Problems to solve</label>
+            <textarea class="ag-req-input" id="hxReqProblems" placeholder="e.g. Content partners blocked on legacy batch entitlement jobs. Support handle time too high on package confusion." rows="3"></textarea>
+          </div>
+          <div class="ag-req-field">
+            <label class="ag-req-label" for="hxReqBusiness">Business requirements</label>
+            <textarea class="ag-req-input" id="hxReqBusiness" placeholder="e.g. Q3 subscriber growth target, entitlements API v2.4 partner onboarding, signed webhook reliability." rows="3"></textarea>
+          </div>
+          <div class="ag-req-footer">
+            <button class="ag-req-save" type="button" data-req-save="hexworth">Save requirements</button>
+            <span class="ag-req-saved" id="hxReqSaved">Saved</span>
+          </div>
+        </div>
+        <div class="ag-client-card-actions">
+          <div class="ag-client-card-enter">Enter portal <span class="arr">&#8594;</span></div>
+          <button class="ag-client-see-all" type="button" data-see-all="hexworth" onclick="event.stopPropagation()">See all updates &#8599;</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="ag-footer">
+    <strong>Shortlist</strong> &middot; Prototype build &middot; Fictional client brands &middot; Accenture Song agency shell
+  </footer>
+</div>
+
+<!-- SCREEN 2A: AETHER DYNAMICS — IBM Carbon product UI -->
+<div class="screen" id="screen-aether">
+  <div class="ae-system-bar">
+    <div class="ae-system-bar-in">
+      <button class="ae-back-btn" type="button" data-back>&#8592; Shortlist agency</button>
+      <span class="ae-sys-spacer"></span>
+      <span class="ae-sys-meta">Network &middot; Q3 FY26</span>
+    </div>
+  </div>
+
+  <header class="ae-product-nav">
+    <div class="ae-product-nav-in">
+      <div class="ae-brand-block">
+        <div class="ae-brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <div class="ae-brand-name">Aether Dynamics</div>
+          <span class="ae-brand-sub">Network &middot; Releases</span>
+        </div>
+      </div>
+      <nav class="ae-nav-links">
+        <button class="ae-nav-link active" type="button">Releases</button>
+        <button class="ae-nav-link" type="button">Components</button>
+        <button class="ae-nav-link" type="button">Network</button>
+        <button class="ae-nav-link" type="button">Health</button>
+      </nav>
+      <div class="ae-nav-end">
+        <div class="ae-persona-tabs" id="aePersonaTabs">
+          <button class="ae-persona-tab active" type="button" data-persona="cio">CIO</button>
+          <button class="ae-persona-tab" type="button" data-persona="product">Product lead</button>
+          <button class="ae-persona-tab" type="button" data-persona="ba">Analyst</button>
+        </div>
+        <button class="ae-share-btn" type="button">Share briefing</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="ae-data-header">
+    <div class="ae-data-header-in">
+      <div class="ae-data-lead">
+        <h1 id="aeHeroTitle">Release notes &middot; personalised for your roadmap</h1>
+        <p id="aeHeroSub">Ordered by relevance to Aether network priorities.</p>
+      </div>
+      <div class="ae-kpi"><div class="n" id="aeStatAll">6</div><div class="l">Open notes</div></div>
+      <div class="ae-kpi"><div class="n" id="aeStatTop">95<em>%</em></div><div class="l">Top match</div></div>
+      <div class="ae-kpi"><div class="n">Q3</div><div class="l">Focus window</div></div>
+      <div class="ae-kpi"><div class="n">3</div><div class="l">Horizons</div></div>
+    </div>
+  </div>
+
+  <div class="ae-persona-panel-in" id="aePersonaPanel">
+    <div class="ae-persona-field">
+      <span class="ae-persona-field-label">Viewing as</span>
+      <div class="ae-persona-field-value" id="aePersonaRole">CIO &middot; Strategic view</div>
+    </div>
+    <div class="ae-persona-field">
+      <span class="ae-persona-field-label">Focus horizon</span>
+      <div class="ae-persona-field-value" id="aePersonaHorizon">Long-term platform &amp; architecture</div>
+    </div>
+    <div class="ae-persona-field" style="flex:2">
+      <span class="ae-persona-field-label">FY objectives</span>
+      <div class="ae-persona-field-value" id="aePersonaObj">Network intelligence, open API platform, scalable 5G architecture</div>
+    </div>
+    <div class="ae-persona-field">
+      <span class="ae-persona-field-label">Matching on</span>
+      <div class="ae-persona-tags" id="aePersonaTags">
+        <span class="ae-persona-tag">Architecture</span>
+        <span class="ae-persona-tag">Platform</span>
+        <span class="ae-persona-tag">Roadmap</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1584px;margin:0 auto;padding:16px 32px 0;">
+    <div class="rerank-bar ae-theme" id="aeRerankBar">
+      <div class="rerank-fields">
+        <div>
+          <label class="rerank-field-label" for="aeRerankClient">Client requirements</label>
+          <textarea class="rerank-textarea" id="aeRerankClient" rows="2" placeholder="Problems to solve and business requirements set at agency level..."></textarea>
+        </div>
+        <div>
+          <label class="rerank-field-label" for="aeRerankPersona">Your focus</label>
+          <textarea class="rerank-textarea" id="aeRerankPersona" rows="2" placeholder="Add your own lens on top of the client requirements..."></textarea>
+        </div>
+      </div>
+      <div class="rerank-actions">
+        <button class="rerank-btn" type="button" id="aeRerankBtn">
+          <span class="rerank-spin">&#9650;</span> Re-rank
+        </button>
+        <span class="rerank-status" id="aeRerankStatus">Default ranking</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ae-main-layout">
+    <nav class="ae-sidebar" id="aeSidebar">
+      <div class="ae-sidebar-label">Horizon</div>
+      <button class="ae-filter-item active" type="button" data-filter="all">All releases <span class="ae-filter-cnt" id="aeFcAll">6</span></button>
+      <button class="ae-filter-item" type="button" data-filter="long">Long-term <span class="ae-filter-cnt" id="aeFcLong">2</span></button>
+      <button class="ae-filter-item" type="button" data-filter="quarter">Quarter <span class="ae-filter-cnt" id="aeFcQuarter">2</span></button>
+      <button class="ae-filter-item" type="button" data-filter="daily">Day-to-day <span class="ae-filter-cnt" id="aeFcDaily">2</span></button>
+    </nav>
+    <div>
+      <div class="ae-feed-top">
+        <h2 id="aeListTitle">All releases</h2>
+        <div class="ae-search-bar">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="search" id="aeSearch" placeholder="Search notes..." autocomplete="off" />
+        </div>
+      </div>
+      <div id="aeNoteList"></div>
+      <div class="ae-empty" id="aeEmpty">No notes match this filter.</div>
+    </div>
+  </div>
+
+  <footer class="ae-footer">
+    <strong>Shortlist</strong> &middot; Aether Dynamics environment &middot; Prototype only
+  </footer>
+</div>
+
+<!-- SCREEN 2B: HEXWORTH — Editorial serif, vivid -->
+<div class="screen" id="screen-hexworth">
+  <header class="hx-nav">
+    <div class="hx-nav-in">
+      <div class="hx-brand-name">Hexworth</div>
+      <nav class="hx-nav-links">
+        <button class="hx-nav-link active" type="button">Releases</button>
+        <button class="hx-nav-link" type="button">Content</button>
+        <button class="hx-nav-link" type="button">Subscribers</button>
+      </nav>
+      <div class="hx-nav-spacer"></div>
+      <div class="hx-persona-pills" id="hxPersonaPills">
+        <button class="hx-persona-pill active" type="button" data-persona="cio">CIO</button>
+        <button class="hx-persona-pill" type="button" data-persona="product">Product lead</button>
+        <button class="hx-persona-pill" type="button" data-persona="ba">Analyst</button>
+      </div>
+      <button class="hx-back-link" type="button" data-back>&#8592; Agency</button>
+      <button class="hx-nav-cta" type="button">Share briefing</button>
+    </div>
+  </header>
+
+  <section class="hx-hero">
+    <div class="hx-hero-in">
+      <div>
+        <p class="hx-hero-eyebrow" id="hxHeroEyebrow">Latest release focus &middot; CIO view</p>
+        <h1 id="hxHeroTitle">Long-term platform moves that reshape your roadmap</h1>
+        <p class="hx-hero-sub" id="hxHeroSub">Filtered to what matters at the strategic horizon. Multi-year plays and platform bets, ranked by relevance to your FY objectives.</p>
+      </div>
+      <aside class="hx-hero-fig">
+        <div class="hx-hero-big" id="hxHeroScore">94%</div>
+        <div class="hx-hero-fig-lbl">Top match</div>
+      </aside>
+    </div>
+  </section>
+
+  <div class="hx-persona-bar">
+    <div class="hx-persona-bar-in">
+      <div class="hx-pfield">
+        <span class="hx-pfield-label">Viewing as</span>
+        <div class="hx-pfield-value" id="hxPersonaRole">CIO &middot; Strategic view</div>
+      </div>
+      <div class="hx-pfield">
+        <span class="hx-pfield-label">Focus horizon</span>
+        <div class="hx-pfield-value" id="hxPersonaHorizon">Long-term platform &amp; architecture</div>
+      </div>
+      <div class="hx-pfield" style="flex:2">
+        <span class="hx-pfield-label">FY objectives</span>
+        <div class="hx-pfield-value" id="hxPersonaObj">Long-term subscriber platform, cross-service identity, API-first media</div>
+      </div>
+      <div class="hx-pfield">
+        <span class="hx-pfield-label">Matching on</span>
+        <div class="hx-ptags" id="hxPersonaTags">
+          <span class="hx-ptag">Identity</span>
+          <span class="hx-ptag">Platform</span>
+          <span class="hx-ptag">Roadmap</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1180px;margin:0 auto;padding:20px 40px 0;">
+    <div class="rerank-bar hx-theme" id="hxRerankBar">
+      <div class="rerank-fields">
+        <div>
+          <label class="rerank-field-label" for="hxRerankClient">Client requirements</label>
+          <textarea class="rerank-textarea" id="hxRerankClient" rows="2" placeholder="Problems to solve and business requirements set at agency level..."></textarea>
+        </div>
+        <div>
+          <label class="rerank-field-label" for="hxRerankPersona">Your focus</label>
+          <textarea class="rerank-textarea" id="hxRerankPersona" rows="2" placeholder="Add your own lens on top of the client requirements..."></textarea>
+        </div>
+      </div>
+      <div class="rerank-actions">
+        <button class="rerank-btn" type="button" id="hxRerankBtn">
+          <span class="rerank-spin">&#9650;</span> Re-rank
+        </button>
+        <span class="rerank-status" id="hxRerankStatus">Default ranking</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hx-main-layout">
+    <nav class="hx-rail" id="hxRail">
+      <button class="hx-rail-btn active" type="button" data-filter="all">All <small id="hxFcAll">7 notes</small></button>
+      <button class="hx-rail-btn" type="button" data-filter="long">Long-term <small id="hxFcLong">Roadmap</small></button>
+      <button class="hx-rail-btn" type="button" data-filter="quarter">Quarter <small id="hxFcQuarter">Release</small></button>
+      <button class="hx-rail-btn" type="button" data-filter="daily">Day-to-day <small id="hxFcDaily">Ops &amp; support</small></button>
+    </nav>
+    <div>
+      <div class="hx-feed-top">
+        <h2 id="hxListTitle">All releases</h2>
+        <div class="hx-search-wrap">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="search" id="hxSearch" placeholder="Search notes..." autocomplete="off" />
+        </div>
+      </div>
+      <div id="hxNoteList"></div>
+      <div class="hx-empty" id="hxEmpty">No notes match this filter.</div>
+    </div>
+  </div>
+
+  <footer class="hx-footer">
+    <strong>Shortlist</strong> &middot; Hexworth environment &middot; Prototype only
+  </footer>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const CLIENTS = {
+    aether: {
+      name: "Aether Dynamics",
+      notes: [
+        { id:"a1", tier:"long", version:"Platform", date:"28 Sep 2026",
+          title:"Multi-year 5G network orchestration platform",
+          excerpt:"Unified service graph across radio, core, edge, and partner networks. Foundation for resilient 5G growth.",
+          tags:["5G","Network","Architecture"],
+          summary:"A new orchestration layer that resolves service state once and fans out to radio, core, edge, and partner systems. Designed to support multi-year network expansion without re-plumbing each market or access type.",
+          why:["Directly supports Aether's long-term network intelligence goal","Unblocks partner roaming and edge-service launches without per-market data forks","Reduces operations escalations from mismatched service state"],
+          scores:{ cio:95, product:72, ba:55 }
+        },
+        { id:"a2", tier:"quarter", version:"DS v4.2", date:"30 Sep 2026",
+          title:"Network console design system — density tokens",
+          excerpt:"Compact, default, and comfortable density tokens for high-information network operations consoles.",
+          tags:["Design System","Network ops","Tokens"],
+          summary:"Compact, default, and comfortable density tokens with audited contrast. Data-table, topology, and status-chip components ship with Storybook docs and Figma library sync.",
+          why:["Mapped to Q3 network operations console modernisation OKR","Expected -18% scroll depth on dense service-impact boards","Support and training playbooks updated for new density modes"],
+          scores:{ cio:60, product:91, ba:78 }
+        },
+        { id:"a3", tier:"daily", version:"v9.4.1", date:"1 Oct 2026",
+          title:"Network telemetry ingest — edge handoff fix",
+          excerpt:"Hotfix for intermittent telemetry gaps when traffic shifts between 5G core and edge regions.",
+          tags:["Telemetry","5G","Hotfix"],
+          summary:"Addresses intermittent ingest gaps reported by network operations. Patch ships through the edge agent; the runbook includes rollback steps and status-page copy.",
+          why:["Reduces day-to-day operations noise on network health gaps","Protects subscriber experience during busy autumn demand","No change to the long-term orchestration roadmap"],
+          scores:{ cio:40, product:65, ba:87 }
+        },
+        { id:"a4", tier:"quarter", version:"API 3.1", date:"25 Sep 2026",
+          title:"Billing API — usage threshold notifications",
+          excerpt:"Proactive usage alerts for plans approaching configured billing thresholds.",
+          tags:["Billing API","Usage","Notifications"],
+          summary:"Clients can subscribe to usage events before a plan threshold is reached. The signals feed care tools and network operations so teams can act before a customer is surprised.",
+          why:["Supports the quarter goal of fewer unexpected billing contacts","Feeds day-to-day support macros with clearer service context"],
+          scores:{ cio:55, product:84, ba:90 }
+        },
+        { id:"a5", tier:"daily", version:"Ops", date:"2 Oct 2026",
+          title:"Roaming change calendar — overnight sync",
+          excerpt:"Operations calendar sync so roaming windows align with partner maintenance automatically.",
+          tags:["Roaming","Ops","Calendar"],
+          summary:"Automated sync from the partner maintenance calendar into the network platform. Reduces manual operations edits during overnight roaming changes.",
+          why:["Improves day-to-day roaming reliability","Fewer last-minute partner change fire-drills"],
+          scores:{ cio:35, product:60, ba:78 }
+        },
+        { id:"a6", tier:"long", version:"Strategy", date:"20 Sep 2026",
+          title:"Open network API readiness roadmap",
+          excerpt:"Phased plan for network, billing, and partner APIs with trust hooks and operator-facing packaging.",
+          tags:["Network API","Interconnect","Roadmap"],
+          summary:"Multi-quarter readiness programme covering network capability APIs, billing integration evidence, and partner-facing packaging for new connectivity services.",
+          why:["Anchors long-term platform openness and service innovation","Aligns network, compliance, and commercial teams on a single narrative"],
+          scores:{ cio:88, product:70, ba:50 }
+        }
+      ]
+    },
+    hexworth: {
+      name: "Hexworth",
+      notes: [
+        { id:"h1", tier:"quarter", version:"API v2.4", date:"29 Sep 2026",
+          title:"Streaming entitlements API v2.4 — flexible content access",
+          excerpt:"New package access and entitlement-preview endpoints for content partners — core Q3 subscriber deliverable.",
+          tags:["Entitlements","API","Content"],
+          summary:"Partners can preview and activate content access without waiting for legacy batch jobs. Includes sandbox fixtures and versioned deprecation of v1 catalogue endpoints.",
+          why:["Primary Q3 deliverable for subscriber experience growth","Unblocks four content integrations waiting on flexible package rules","Reduces custom extracts from media operations"],
+          scores:{ cio:75, product:97, ba:88 }
+        },
+        { id:"h2", tier:"long", version:"Platform", date:"22 Sep 2026",
+          title:"Cross-service subscriber identity framework",
+          excerpt:"Long-term framework for subscriber identity across streaming, set-top, and partner experiences.",
+          tags:["Identity","Streaming","Architecture"],
+          summary:"Defines how subscribers sign in, manage profiles, and carry entitlements across mobile, web, set-top, and partner apps. Telemetry feeds the audience console; onboarding is API-driven.",
+          why:["Cornerstone of long-term connected media growth","Sets the experience model for multi-year content and distribution deals"],
+          scores:{ cio:94, product:78, ba:55 }
+        },
+        { id:"h3", tier:"daily", version:"v6.2.1", date:"1 Oct 2026",
+          title:"Hexworth app — playback handoff fix",
+          excerpt:"Faster playback handoff with clearer package availability across the day-to-day app path.",
+          tags:["App","Playback","UX"],
+          summary:"Streamlined handoff from browse to playback reduces drop-off. Availability copy aligns across app, care macros, and entitlement checks; analytics cover each funnel step.",
+          why:["Cuts day-to-day support contacts on package confusion","Protects viewing satisfaction during the autumn release push"],
+          scores:{ cio:42, product:72, ba:86 }
+        },
+        { id:"h4", tier:"quarter", version:"Hub 5.0", date:"27 Sep 2026",
+          title:"Content partner hub — event retries and signed payloads",
+          excerpt:"Reliable content-package event delivery with signed payloads for partner integrations.",
+          tags:["Partner Hub","Webhooks","Security"],
+          summary:"Exponential backoff retries, dead-letter queue, and signed payloads for content and entitlement events. Partner docs and the test collection are updated.",
+          why:["Supports the Q3 active-integration growth target","Reduces partner support tickets on missed package events"],
+          scores:{ cio:65, product:90, ba:82 }
+        },
+        { id:"h5", tier:"daily", version:"Ops", date:"2 Oct 2026",
+          title:"Billing run — October package change window",
+          excerpt:"Scheduled maintenance for October billing and package updates; status pages pre-staged.",
+          tags:["Billing API","Ops","Change"],
+          summary:"Standard monthly change window with freeze rules, rollback plan, and status-page templates for support and content partners.",
+          why:["Keeps day-to-day billing and package operations predictable","Partners notified through the hub ahead of the freeze"],
+          scores:{ cio:38, product:65, ba:82 }
+        },
+        { id:"h6", tier:"long", version:"Strategy", date:"18 Sep 2026",
+          title:"Open content APIs — streaming roadmap",
+          excerpt:"Multi-year exposure plan: catalogue sync, entitlement signals, and package identity for media partners.",
+          tags:["Content API","Streaming","Roadmap"],
+          summary:"Phased exposure of content and streaming APIs to app developers and distribution partners, with commercial packaging and trust controls.",
+          why:["Anchors a long-term API-first media platform narrative","Aligns product, legal, and partner teams on sequencing"],
+          scores:{ cio:92, product:75, ba:52 }
+        },
+        { id:"h7", tier:"daily", version:"v4.1.2", date:"30 Sep 2026",
+          title:"Support desktop — entitlement context update",
+          excerpt:"Updated support macros and deep-links into the entitlement API for faster subscriber access resolution.",
+          tags:["Support","Entitlements","Tooling"],
+          summary:"Agents get one-click context from access tickets into the relevant package and entitlement preview. Reduces average handle time.",
+          why:["Improves day-to-day subscriber support efficiency","Uses new entitlement API surfaces from the quarter release"],
+          scores:{ cio:45, product:68, ba:80 }
+        }
+      ]
+    }
+  };
+
+  const PERSONA_CONFIG = {
+    cio: {
+      label: "CIO &middot; Strategic view",
+      horizon: "Long-term platform &amp; architecture",
+      objectives: {
+        aether: "Network intelligence, open API platform, scalable 5G architecture",
+        hexworth: "Long-term subscriber platform, cross-service identity, API-first media"
+      },
+      tags: { aether: ["Architecture","Platform","Roadmap"], hexworth: ["Identity","Platform","Roadmap"] },
+      heroTitle: { aether: "Long-term platform moves that reshape your roadmap", hexworth: "Long-term platform moves that reshape your roadmap" },
+      heroSub: { aether: "Filtered to what matters at the strategic horizon. Multi-year plays and platform bets, ranked by relevance to your FY objectives.", hexworth: "Filtered to what matters at the strategic horizon. Multi-year plays and platform bets, ranked by relevance to your FY objectives." }
+    },
+    product: {
+      label: "Product lead &middot; Quarterly view",
+      horizon: "Quarter delivery &amp; capability roadmap",
+      objectives: {
+        aether: "Q3 network ops console, billing API improvements, design system rollout",
+        hexworth: "Q3 entitlements API, partner hub reliability, subscriber growth metrics"
+      },
+      tags: { aether: ["Design System","Billing API","Q3 OKR"], hexworth: ["Entitlements","Partner Hub","Q3 OKR"] },
+      heroTitle: { aether: "What ships this quarter and why it matters", hexworth: "What ships this quarter and why it matters" },
+      heroSub: { aether: "Ranked by impact on your Q3 delivery targets. Capability releases, design system changes, and API updates most likely to need your attention.", hexworth: "Ranked by impact on your Q3 delivery targets. API releases, partner hub changes, and subscriber experience updates most likely to need your attention." }
+    },
+    ba: {
+      label: "Business analyst &middot; Day-to-day view",
+      horizon: "Operational &amp; day-to-day",
+      objectives: {
+        aether: "Telemetry reliability, Jira plug-in compatibility, roaming operations, billing thresholds",
+        hexworth: "Support tooling, billing ops, playback reliability, entitlement data accuracy"
+      },
+      tags: { aether: ["Telemetry","Ops","Billing","Jira"], hexworth: ["Support","Billing","Playback","Ops"] },
+      heroTitle: { aether: "Day-to-day changes that affect your team today", hexworth: "Day-to-day changes that affect your team today" },
+      heroSub: { aether: "Operational hotfixes, runbook updates, and threshold changes your team needs to know about. Sorted by immediacy.", hexworth: "Operational fixes, support tooling updates, and billing window changes your team needs to act on. Sorted by immediacy." }
+    }
+  };
+
+  const TIER_TITLES = { all: "All releases", long: "Long-term", quarter: "Quarter", daily: "Day-to-day" };
+
+  // Client-level requirements (set on agency dashboard)
+  const REQS = {
+    aether:   { problems: "", business: "" },
+    hexworth: { problems: "", business: "" }
+  };
+
+  // Per-client state — aiScores holds AI-generated scores keyed by noteId, null = use defaults
+  const STATE = {
+    aether:   { persona: "cio", filter: "all", search: "", open: null, aiScores: null, aiActive: false },
+    hexworth: { persona: "cio", filter: "all", search: "", open: null, aiScores: null, aiActive: false }
+  };
+
+  function getFiltered(clientId) {
+    const { persona, filter, search, aiScores } = STATE[clientId];
+    return CLIENTS[clientId].notes
+      .filter(n => {
+        if (filter !== "all" && n.tier !== filter) return false;
+        if (search) {
+          const hay = [n.title, n.excerpt, n.summary, ...n.tags].join(" ").toLowerCase();
+          if (!hay.includes(search.toLowerCase())) return false;
+        }
+        return true;
+      })
+      .slice()
+      .sort((a, b) => {
+        const sA = aiScores ? (aiScores[a.id] ?? a.scores[persona]) : a.scores[persona];
+        const sB = aiScores ? (aiScores[b.id] ?? b.scores[persona]) : b.scores[persona];
+        return sB - sA;
+      });
+  }
+
+  function getScore(clientId, noteId) {
+    const { persona, aiScores } = STATE[clientId];
+    if (aiScores && aiScores[noteId] !== undefined) return aiScores[noteId];
+    return CLIENTS[clientId].notes.find(n => n.id === noteId)?.scores[persona] ?? 0;
+  }
+
+  // ─── AI RE-RANK ───
+  async function runRerank(clientId) {
+    const isAe = clientId === "aether";
+    const btn = document.getElementById(isAe ? "aeRerankBtn" : "hxRerankBtn");
+    const statusEl = document.getElementById(isAe ? "aeRerankStatus" : "hxRerankStatus");
+    const clientReq = document.getElementById(isAe ? "aeRerankClient" : "hxRerankClient").value.trim();
+    const personaReq = document.getElementById(isAe ? "aeRerankPersona" : "hxRerankPersona").value.trim();
+
+    if (!clientReq && !personaReq) return;
+
+    btn.disabled = true;
+    btn.classList.add("loading");
+    statusEl.textContent = "Ranking\u2026";
+    statusEl.classList.remove("live");
+
+    const notes = CLIENTS[clientId].notes;
+    const persona = STATE[clientId].persona;
+    const personaLabel = persona === "cio" ? "CIO (strategic, long-term)" : persona === "product" ? "Product Lead (quarterly delivery)" : "Business Analyst (day-to-day operations)";
+
+    const prompt = `You are a release notes relevance analyst. Score each release note against the stated requirements and persona.
+
+Client requirements:
+${clientReq || "(none stated)"}
+
+Persona focus (${personaLabel}):
+${personaReq || "(none stated)"}
+
+Release notes to score:
+${notes.map(n => `ID: ${n.id}
+Title: ${n.title}
+Summary: ${n.summary}
+Tags: ${n.tags.join(", ")}`).join("\n\n")}
+
+Return ONLY a JSON object mapping each note ID to a relevance score from 0–100. Base scores on how directly each note addresses the stated requirements and fits the persona's priorities. Example: {"a1": 94, "a2": 61}. No other text.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 400,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const raw = (data.content || []).map(c => c.text || "").join("").replace(/```json|```/g, "").trim();
+      const scores = JSON.parse(raw);
+      STATE[clientId].aiScores = scores;
+      STATE[clientId].aiActive = true;
+      statusEl.textContent = "AI-ranked";
+      statusEl.classList.add("live");
+    } catch (e) {
+      statusEl.textContent = "Failed — try again";
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("loading");
+    }
+
+    if (isAe) aeRenderNotes(); else hxRenderNotes();
+  }
+
+  // ─── AETHER RENDER ───
+  function aeUpdatePersona() {
+    const { persona } = STATE.aether;
+    const cfg = PERSONA_CONFIG[persona];
+    const pLabel = persona === "cio" ? "CIO" : persona === "product" ? "Product lead" : "Analyst";
+    document.getElementById("aeHeroTitle").textContent = cfg.heroTitle.aether;
+    document.getElementById("aeHeroSub").textContent = cfg.heroSub.aether;
+    document.getElementById("aePersonaRole").textContent = pLabel + " \u00b7 " + cfg.label.split("&middot;")[1].trim();
+    document.getElementById("aePersonaHorizon").innerHTML = cfg.horizon;
+    document.getElementById("aePersonaObj").textContent = cfg.objectives.aether;
+    document.getElementById("aePersonaTags").innerHTML = cfg.tags.aether.map(t=>`<span class="ae-persona-tag">${t}</span>`).join("");
+    document.querySelectorAll("#aePersonaTabs .ae-persona-tab").forEach(b => b.classList.toggle("active", b.dataset.persona === persona));
+    const all = CLIENTS.aether.notes;
+    const top = Math.max(...all.map(n=>n.scores[persona]));
+    document.getElementById("aeStatAll").textContent = all.length;
+    document.getElementById("aeStatTop").innerHTML = top + '<em>%</em>';
+    document.getElementById("aeFcAll").textContent = all.length;
+    document.getElementById("aeFcLong").textContent = all.filter(n=>n.tier==="long").length;
+    document.getElementById("aeFcQuarter").textContent = all.filter(n=>n.tier==="quarter").length;
+    document.getElementById("aeFcDaily").textContent = all.filter(n=>n.tier==="daily").length;
+  }
+
+  function aeRenderNotes() {
+    const { filter, open, persona } = STATE.aether;
+    const notes = getFiltered("aether");
+    const list = document.getElementById("aeNoteList");
+    const empty = document.getElementById("aeEmpty");
+    document.getElementById("aeListTitle").textContent = TIER_TITLES[filter];
+    document.querySelectorAll("#aeSidebar .ae-filter-item").forEach(b => b.classList.toggle("active", b.dataset.filter === filter));
+    if (!notes.length) { list.innerHTML = ""; empty.classList.add("show"); return; }
+    empty.classList.remove("show");
+    const tierLabel = { long:"Long-term", quarter:"Quarter", daily:"Day-to-day" };
+    list.innerHTML = notes.map(n => {
+      const score = getScore("aether", n.id);
+      const isOpen = open === n.id;
+      return `
+        <div class="ae-note-row">
+          <button class="ae-note-row-main" type="button" data-note="${n.id}">
+            <div class="ae-tier-tag ${n.tier}">${tierLabel[n.tier]}</div>
+            <div>
+              <div class="ae-note-title">${n.title}</div>
+              <div class="ae-note-excerpt">${n.excerpt}</div>
+              <div class="ae-note-chips">
+                <span class="ae-note-chip">${n.date}</span>
+                <span class="ae-note-chip">${n.version}</span>
+                ${n.tags.slice(0,2).map(t=>`<span class="ae-note-chip">${t}</span>`).join("")}
+              </div>
+            </div>
+            <div class="ae-note-score">
+              <div class="n">${score}<em>%</em></div>
+              <div class="l">Match</div>
+              ${STATE.aether.aiActive ? '<span class="ai-badge ae-theme">AI</span>' : ""}
+            </div>
+          </button>
+          ${isOpen ? `
+          <div class="ae-note-expand open">
+            <div>
+              <h4>Summary</h4>
+              <p>${n.summary}</p>
+              <div class="ae-note-expand-actions">
+                <button class="ae-btn-ghost" type="button">Pin</button>
+                <button class="ae-btn-primary" type="button">Add to briefing</button>
+              </div>
+            </div>
+            <div>
+              <h4>Why it matters here</h4>
+              <ul>${n.why.map(w=>`<li>${w}</li>`).join("")}</ul>
+            </div>
+          </div>` : ""}
+        </div>`;
+    }).join("");
+  }
+
+  // ─── HEXWORTH RENDER ───
+  function hxUpdatePersona() {
+    const { persona } = STATE.hexworth;
+    const cfg = PERSONA_CONFIG[persona];
+    const pLabel = persona === "cio" ? "CIO" : persona === "product" ? "Product lead" : "Analyst";
+    document.getElementById("hxHeroEyebrow").textContent = `Latest release focus \u00b7 ${pLabel} view`;
+    document.getElementById("hxHeroTitle").textContent = cfg.heroTitle.hexworth;
+    document.getElementById("hxHeroSub").textContent = cfg.heroSub.hexworth;
+    document.getElementById("hxPersonaRole").textContent = pLabel + " \u00b7 " + cfg.label.split("&middot;")[1].trim();
+    document.getElementById("hxPersonaHorizon").innerHTML = cfg.horizon;
+    document.getElementById("hxPersonaObj").textContent = cfg.objectives.hexworth;
+    document.getElementById("hxPersonaTags").innerHTML = cfg.tags.hexworth.map(t=>`<span class="hx-ptag">${t}</span>`).join("");
+    document.querySelectorAll("#hxPersonaPills .hx-persona-pill").forEach(b => b.classList.toggle("active", b.dataset.persona === persona));
+    const all = CLIENTS.hexworth.notes;
+    const top = Math.max(...all.map(n=>n.scores[persona]));
+    document.getElementById("hxHeroScore").textContent = top + "%";
+    document.getElementById("hxFcAll").textContent = all.length + " notes";
+    document.getElementById("hxFcLong").textContent = all.filter(n=>n.tier==="long").length + " notes";
+    document.getElementById("hxFcQuarter").textContent = all.filter(n=>n.tier==="quarter").length + " notes";
+    document.getElementById("hxFcDaily").textContent = all.filter(n=>n.tier==="daily").length + " notes";
+  }
+
+  function hxRenderNotes() {
+    const { filter, open, persona } = STATE.hexworth;
+    const notes = getFiltered("hexworth");
+    const list = document.getElementById("hxNoteList");
+    const empty = document.getElementById("hxEmpty");
+    document.getElementById("hxListTitle").textContent = TIER_TITLES[filter];
+    document.querySelectorAll("#hxRail .hx-rail-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === filter));
+    if (!notes.length) { list.innerHTML = ""; empty.classList.add("show"); return; }
+    empty.classList.remove("show");
+    const tierLabel = { long:"Long-term", quarter:"Quarter", daily:"Day-to-day" };
+    list.innerHTML = notes.map(n => {
+      const score = getScore("hexworth", n.id);
+      const isOpen = open === n.id;
+      return `
+        <div class="hx-note-row">
+          <button class="hx-note-row-main" type="button" data-note="${n.id}">
+            <div class="hx-tier-pill ${n.tier}">${tierLabel[n.tier]}</div>
+            <div>
+              <div class="hx-note-title">${n.title}</div>
+              <div class="hx-note-excerpt">${n.excerpt}</div>
+              <div class="hx-note-chips">
+                <span class="hx-note-chip">${n.date}</span>
+                <span class="hx-note-chip">${n.version}</span>
+                ${n.tags.slice(0,2).map(t=>`<span class="hx-note-chip">${t}</span>`).join("")}
+              </div>
+            </div>
+            <div class="hx-note-score">
+              <div class="n">${score}<em>%</em></div>
+              <div class="l">Match</div>
+              ${STATE.hexworth.aiActive ? '<span class="ai-badge hx-theme">AI</span>' : ""}
+            </div>
+          </button>
+          ${isOpen ? `
+          <div class="hx-note-expand open">
+            <div>
+              <h4>Summary</h4>
+              <p>${n.summary}</p>
+              <div class="hx-note-expand-actions">
+                <button class="hx-btn-ghost" type="button">Pin</button>
+                <button class="hx-btn-primary" type="button">Add to briefing</button>
+              </div>
+            </div>
+            <div>
+              <h4>Why it matters here</h4>
+              <ul>${n.why.map(w=>`<li>${w}</li>`).join("")}</ul>
+            </div>
+          </div>` : ""}
+        </div>`;
+    }).join("");
+  }
+
+  // ─── NAVIGATION ───
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    window.scrollTo(0,0);
+  }
+
+  function enterPortal(clientId) {
+    // Preserve aiScores across persona/filter changes, but reset nav state
+    STATE[clientId].persona = "cio";
+    STATE[clientId].filter = "all";
+    STATE[clientId].search = "";
+    STATE[clientId].open = null;
+
+    // Prefill rerank bars from saved agency requirements
+    const isAe = clientId === "aether";
+    const clientField = document.getElementById(isAe ? "aeRerankClient" : "hxRerankClient");
+    const req = REQS[clientId];
+    clientField.value = [req.problems, req.business].filter(Boolean).join("\n");
+
+    if (isAe) {
+      document.getElementById("aeSearch").value = "";
+      document.querySelectorAll("#aePersonaTabs .ae-persona-tab").forEach(b => b.classList.toggle("active", b.dataset.persona === "cio"));
+      document.querySelectorAll("#aeSidebar .ae-filter-item").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+      const statusEl = document.getElementById("aeRerankStatus");
+      statusEl.textContent = STATE.aether.aiActive ? "AI-ranked" : "Default ranking";
+      statusEl.classList.toggle("live", STATE.aether.aiActive);
+      aeUpdatePersona(); aeRenderNotes();
+      showScreen("screen-aether");
+    } else {
+      document.getElementById("hxSearch").value = "";
+      document.querySelectorAll("#hxPersonaPills .hx-persona-pill").forEach(b => b.classList.toggle("active", b.dataset.persona === "cio"));
+      document.querySelectorAll("#hxRail .hx-rail-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+      const statusEl = document.getElementById("hxRerankStatus");
+      statusEl.textContent = STATE.hexworth.aiActive ? "AI-ranked" : "Default ranking";
+      statusEl.classList.toggle("live", STATE.hexworth.aiActive);
+      hxUpdatePersona(); hxRenderNotes();
+      showScreen("screen-hexworth");
+    }
+  }
+
+  // Client card click — whole card is the enter target, drawer stops propagation
+  document.querySelectorAll(".ag-client-card[data-enter]").forEach(card => {
+    card.addEventListener("click", () => enterPortal(card.dataset.enter));
+  });
+  document.querySelectorAll("[data-back]").forEach(btn => {
+    btn.addEventListener("click", () => showScreen("screen-agency"));
+  });
+
+  // Agency requirements drawer toggles
+  document.querySelectorAll("[data-req-toggle]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const clientId = btn.dataset.reqToggle;
+      const drawer = document.getElementById(clientId === "aether" ? "aeReqDrawer" : "hxReqDrawer");
+      const isOpen = drawer.classList.toggle("open");
+      btn.classList.toggle("open", isOpen);
+    });
+  });
+
+  // ─── INDUSTRY TRENDS ───
+  async function fetchTrends() {
+    const btn = document.getElementById("agTrendsFetchBtn");
+    const container = document.getElementById("agTrends");
+    if (btn) { btn.textContent = "Fetching\u2026"; btn.disabled = true; }
+    container.innerHTML = `<div class="ag-trend-loading"><span style="animation:spin 0.7s linear infinite;display:inline-block">&#8635;</span> Identifying trends\u2026</div>`;
+
+    const prompt = `You are an industry analyst. Identify the top 5 technology and product management industry trends most relevant to agency teams working on digital product releases, release notes, and client-facing change communication in October 2026.
+
+Return ONLY a JSON array of exactly 5 objects with these fields:
+- rank: number 1-5
+- title: string (5-8 words, specific trend name)
+- description: string (1 sentence, plain language, no hype)
+- direction: "up", "flat", or "down" (momentum of this trend right now)
+
+No markdown, no code fences, no preamble. Raw JSON only.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 600, messages: [{ role: "user", content: prompt }] })
+      });
+      const data = await res.json();
+      const raw = (data.content || []).map(c => c.text || "").join("").replace(/```json|```/g, "").trim();
+      const trends = JSON.parse(raw);
+      const dirIcon = { up: "&#8599;", flat: "&#8594;", down: "&#8600;" };
+      const dirLabel = { up: "Rising", flat: "Stable", down: "Declining" };
+      container.innerHTML = trends.map(t => `
+        <div class="ag-trend-card">
+          <div class="ag-trend-rank">0${t.rank}</div>
+          <div class="ag-trend-title">${t.title}</div>
+          <div class="ag-trend-desc">${t.description}</div>
+          <div class="ag-trend-dir ${t.direction}">${dirIcon[t.direction] || ""} ${dirLabel[t.direction] || t.direction}</div>
+        </div>`).join("");
+    } catch(e) {
+      container.innerHTML = `<div class="ag-trend-loading">Could not fetch trends. <button class="ag-trends-fetch-btn" id="agTrendsFetchBtn" type="button">Retry</button></div>`;
+      document.getElementById("agTrendsFetchBtn")?.addEventListener("click", fetchTrends);
+    }
+  }
+
+  // ─── INTELLIGENCE TABS ───
+  let activeTab = "update";
+  let sentimentMeta = "Not yet fetched";
+
+  function setIntelActionBtn() {
+    const el = document.getElementById("agIntelAction");
+    if (activeTab === "update") {
+      el.innerHTML = ""; // fetch is in the topbar
+    } else if (activeTab === "trends") {
+      el.innerHTML = `<button class="ag-intel-action-btn" type="button" id="agTabTrendBtn"><span id="agTabTrendSpin">&#8635;</span> Fetch trends</button>`;
+      document.getElementById("agTabTrendBtn").addEventListener("click", fetchTrends);
+    } else {
+      el.innerHTML = `<span class="ag-intel-action-meta" id="agSentimentMeta">${sentimentMeta}</span><button class="ag-intel-action-btn" type="button" id="agTabSentBtn"><span id="agTabSentSpin">&#8635;</span> Fetch sentiment</button>`;
+      document.getElementById("agTabSentBtn").addEventListener("click", fetchSentiment);
+    }
+  }
+
+  document.querySelectorAll(".ag-intel-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeTab = tab.dataset.tab;
+      document.querySelectorAll(".ag-intel-tab").forEach(t => t.classList.toggle("active", t === tab));
+      document.querySelectorAll(".ag-intel-panel").forEach(p => p.classList.toggle("active", p.id === "tab" + activeTab.charAt(0).toUpperCase() + activeTab.slice(1)));
+      setIntelActionBtn();
+    });
+  });
+
+  setIntelActionBtn();
+
+  // Inline fetch button in trends empty state
+  document.getElementById("agTrendsFetchBtn")?.addEventListener("click", fetchTrends);
+
+  // ─── TRENDS ───
+  async function fetchTrends() {
+    const btn = document.getElementById("agTabTrendBtn") || document.getElementById("agTrendsFetchBtn");
+    const spinEl = btn?.querySelector("span") || document.getElementById("agTabTrendSpin");
+    const cards = document.getElementById("agTrendCards");
+    if (btn) { btn.disabled = true; }
+    if (spinEl) { spinEl.style.display = "inline-block"; spinEl.style.animation = "spin 0.7s linear infinite"; }
+    cards.innerHTML = `<div class="ag-intel-empty"><span style="animation:spin 0.7s linear infinite;display:inline-block">&#8635;</span> Identifying trends\u2026</div>`;
+
+    const prompt = `You are an industry analyst. Identify exactly 3 technology and product management trends most relevant to agency teams working on digital product releases and client-facing change communication in October 2026.
+
+Return ONLY a JSON array of exactly 3 objects:
+- rank: number 1-3
+- title: string (5-8 words, specific trend name)
+- description: string (1 sentence, plain language, no hype)
+- direction: "up", "flat", or "down"
+
+Raw JSON only, no markdown.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, messages: [{ role: "user", content: prompt }] })
+      });
+      const data = await res.json();
+      const raw = (data.content || []).map(c => c.text || "").join("").replace(/```json|```/g, "").trim();
+      const trends = JSON.parse(raw);
+      const dirLabel = { up: "&#8599; Rising", flat: "&#8594; Stable", down: "&#8600; Declining" };
+      cards.innerHTML = trends.slice(0,3).map(t => `
+        <div class="ag-intel-card">
+          <div class="ag-intel-card-rank">0${t.rank}</div>
+          <div class="ag-intel-card-title">${t.title}</div>
+          <div class="ag-intel-card-desc">${t.description}</div>
+          <div class="ag-intel-card-type ${t.direction}">${dirLabel[t.direction] || t.direction}</div>
+        </div>`).join("");
+    } catch(e) {
+      cards.innerHTML = `<div class="ag-intel-empty">Could not fetch trends. <button class="ag-intel-inline-btn" id="agTrendsFetchBtn" type="button">Retry</button></div>`;
+      document.getElementById("agTrendsFetchBtn")?.addEventListener("click", fetchTrends);
+    } finally {
+      if (btn) btn.disabled = false;
+      if (spinEl) { spinEl.style.animation = ""; }
+    }
+  }
+
+  // ─── SENTIMENT ───
+  async function fetchSentiment() {
+    const btn = document.getElementById("agTabSentBtn");
+    const spinEl = document.getElementById("agTabSentSpin");
+    const cards = document.getElementById("agSentimentCards");
+    const query = document.getElementById("agXQuery").value.trim() || "release notes software product management";
+    if (btn) btn.disabled = true;
+    if (spinEl) { spinEl.style.display = "inline-block"; spinEl.style.animation = "spin 0.7s linear infinite"; }
+    cards.innerHTML = `<div class="ag-intel-empty"><span style="animation:spin 0.7s linear infinite;display:inline-block">&#8635;</span> Reading X.com signals\u2026</div>`;
+
+    const prompt = `You are a social media analyst. Simulate realistic X.com sentiment analysis for the query: "${query}" in October 2026.
+
+Generate exactly 3 representative signal items — a mix of positive, neutral, and negative.
+
+Return ONLY a JSON array of 3 objects:
+- topic: string (3-6 words, the sub-topic this signal relates to)
+- sentiment: "pos", "neu", or "neg"
+- score: number 0-100
+- summary: string (1-2 sentences, analyst observation of what people are saying)
+
+Raw JSON only.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: prompt }] })
+      });
+      const data = await res.json();
+      const raw = (data.content || []).map(c => c.text || "").join("").replace(/```json|```/g, "").trim();
+      const signals = JSON.parse(raw);
+      const sentLabel = { pos: "Positive", neu: "Neutral", neg: "Negative" };
+      cards.innerHTML = signals.slice(0,3).map(s => `
+        <div class="ag-intel-card">
+          <div class="ag-intel-card-score ${s.sentiment}">${s.score}<small style="font-size:0.45em;font-family:var(--mono);color:var(--mute);vertical-align:super">/100</small></div>
+          <div class="ag-intel-card-title">${s.topic}</div>
+          <div class="ag-intel-card-desc">${s.summary}</div>
+          <div class="ag-intel-card-type ${s.sentiment}">${sentLabel[s.sentiment]}</div>
+        </div>`).join("");
+      const now = new Date();
+      sentimentMeta = `"${query.slice(0,24)}\u2026" \u00b7 ${now.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}`;
+      setIntelActionBtn();
+    } catch(e) {
+      cards.innerHTML = `<div class="ag-intel-empty">Could not fetch sentiment. Try again.</div>`;
+    } finally {
+      if (btn) btn.disabled = false;
+      if (spinEl) spinEl.style.animation = "";
+    }
+  }
+
+  // Agency requirements save
+  document.querySelectorAll("[data-req-save]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const clientId = btn.dataset.reqSave;
+      const isAe = clientId === "aether";
+      REQS[clientId].problems = document.getElementById(isAe ? "aeReqProblems" : "hxReqProblems").value.trim();
+      REQS[clientId].business = document.getElementById(isAe ? "aeReqBusiness" : "hxReqBusiness").value.trim();
+      const savedEl = document.getElementById(isAe ? "aeReqSaved" : "hxReqSaved");
+      savedEl.classList.add("show");
+      setTimeout(() => savedEl.classList.remove("show"), 2000);
+    });
+  });
+
+  // Re-rank buttons
+  document.getElementById("aeRerankBtn").addEventListener("click", () => runRerank("aether"));
+  document.getElementById("hxRerankBtn").addEventListener("click", () => runRerank("hexworth"));
+
+  // Aether interactions
+  document.getElementById("aePersonaTabs").addEventListener("click", e => {
+    const btn = e.target.closest(".ae-persona-tab");
+    if (!btn) return;
+    STATE.aether.persona = btn.dataset.persona;
+    STATE.aether.open = null;
+    aeUpdatePersona(); aeRenderNotes();
+  });
+  document.getElementById("aeSidebar").addEventListener("click", e => {
+    const btn = e.target.closest(".ae-filter-item");
+    if (!btn) return;
+    STATE.aether.filter = btn.dataset.filter;
+    STATE.aether.open = null;
+    aeRenderNotes();
+  });
+  document.getElementById("aeSearch").addEventListener("input", e => {
+    STATE.aether.search = e.target.value;
+    STATE.aether.open = null;
+    aeRenderNotes();
+  });
+  document.getElementById("aeNoteList").addEventListener("click", e => {
+    if (e.target.closest(".ae-note-expand")) return;
+    const btn = e.target.closest("[data-note]");
+    if (!btn) return;
+    const id = btn.dataset.note;
+    STATE.aether.open = STATE.aether.open === id ? null : id;
+    aeRenderNotes();
+  });
+
+  // Hexworth interactions
+  document.getElementById("hxPersonaPills").addEventListener("click", e => {
+    const btn = e.target.closest(".hx-persona-pill");
+    if (!btn) return;
+    STATE.hexworth.persona = btn.dataset.persona;
+    STATE.hexworth.open = null;
+    hxUpdatePersona(); hxRenderNotes();
+  });
+  document.getElementById("hxRail").addEventListener("click", e => {
+    const btn = e.target.closest(".hx-rail-btn");
+    if (!btn) return;
+    STATE.hexworth.filter = btn.dataset.filter;
+    STATE.hexworth.open = null;
+    hxRenderNotes();
+  });
+  document.getElementById("hxSearch").addEventListener("input", e => {
+    STATE.hexworth.search = e.target.value;
+    STATE.hexworth.open = null;
+    hxRenderNotes();
+  });
+  document.getElementById("hxNoteList").addEventListener("click", e => {
+    if (e.target.closest(".hx-note-expand")) return;
+    const btn = e.target.closest("[data-note]");
+    if (!btn) return;
+    const id = btn.dataset.note;
+    STATE.hexworth.open = STATE.hexworth.open === id ? null : id;
+    hxRenderNotes();
+  });
+
+  // ─── AUTO FETCH ───
+  const SOURCE_LABELS = {
+    saas:  "SaaS platform changelog",
+    api:   "API / developer changelog",
+    ds:    "Design system release",
+    infra: "Infrastructure release notes",
+    media: "Streaming platform changelog"
+  };
+
+  const FETCH_STEPS = [
+    "Connecting to changelog\u2026",
+    "Reading release entries\u2026",
+    "Extracting key changes\u2026",
+    "Ranking by impact\u2026"
+  ];
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // Determine which client a note type is most salient to (rough heuristic on seeded data)
+  const CLIENT_NAMES = { aether: "Aether Dynamics", hexworth: "Hexworth" };
+  function inferSalientClient(note) {
+    const text = (note.title + " " + (note.description || "")).toLowerCase();
+    const hexScore = ["stream","entitle","content","media","subscriber","playback","partner hub"].filter(k => text.includes(k)).length;
+    const aeScore = ["network","5g","telemetry","roaming","billing","orchestrat","console","api read"].filter(k => text.includes(k)).length;
+    if (hexScore === aeScore) return null;
+    return hexScore > aeScore ? "hexworth" : "aether";
+  }
+
+  function renderUpdateCards(notes) {
+    const updateCards = document.getElementById("agUpdateCards");
+    updateCards.innerHTML = "";
+    notes.slice(0, 3).forEach((n, idx) => {
+      const type = (n.type || "product").toLowerCase();
+      const salient = n.salient || inferSalientClient(n);
+      const card = document.createElement("div");
+      card.className = "ag-intel-card";
+      card.style.animation = `rowIn 0.4s cubic-bezier(0.16,1,0.3,1) ${idx * 120}ms both`;
+      card.innerHTML = `
+        <div class="ag-intel-card-type ${type}">${type}</div>
+        <div class="ag-intel-card-title">${n.title || "Untitled"}</div>
+        <div class="ag-intel-card-desc">${n.description || ""}</div>
+        <div class="ag-intel-card-footer">
+          <span class="ag-intel-card-date">${n.date || ""}</span>
+          ${salient ? `<span class="ag-intel-card-salient" data-client="${salient}" title="Most relevant to this client">${CLIENT_NAMES[salient]}</span>` : ""}
+        </div>`;
+      updateCards.appendChild(card);
+    });
+    // Re-bind salient badge clicks after render
+    updateCards.querySelectorAll(".ag-intel-card-salient").forEach(badge => {
+      badge.addEventListener("click", () => enterPortal(badge.dataset.client));
+    });
+  }
+
+  async function runAutoFetch() {
+    const sourceKey = document.getElementById("scrapeSource").value;
+    const sourceLabel = SOURCE_LABELS[sourceKey] || "product changelog";
+    const btn = document.getElementById("openScrapeBtn");
+    const btnLabel = document.getElementById("scrapeBtnLabel");
+    const statusBar = document.getElementById("fetchStatus");
+    const statusText = document.getElementById("fetchStatusText");
+    const statusStep = document.getElementById("fetchStatusStep");
+
+    btn.classList.add("fetching");
+    btnLabel.textContent = "Fetching\u2026";
+    statusBar.classList.add("show");
+
+    for (let i = 0; i < FETCH_STEPS.length; i++) {
+      statusText.textContent = FETCH_STEPS[i];
+      statusStep.textContent = (i + 1) + " / " + FETCH_STEPS.length;
+      if (i < FETCH_STEPS.length - 1) await sleep(700);
+    }
+
+    let notes = [];
+    try {
+      const prompt = `You are a release notes analyst generating realistic changelog entries for a ${sourceLabel}.
+
+Generate exactly 3 release note items that would appear in a real product changelog for this type of software. Make them specific, technical, and realistic.
+
+Return ONLY a JSON array. Each object must have:
+- title: string (concise, specific changelog entry title)
+- type: one of exactly: platform, product, ops, security
+- date: a date string in format "D Mon YYYY" within the last 2 weeks of October 2026
+- description: 1–2 sentences of plain technical detail. No marketing language.
+
+Raw JSON array only. No markdown, no code fences, no preamble.`;
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 600, messages: [{ role: "user", content: prompt }] })
+      });
+      const data = await response.json();
+      const raw = (data.content || []).map(c => c.text || "").join("").replace(/```json|```/g, "").trim();
+      notes = JSON.parse(raw);
+    } catch(e) {
+      statusBar.classList.remove("show");
+      statusText.textContent = FETCH_STEPS[0];
+      btn.classList.remove("fetching");
+      btnLabel.textContent = "Fetch latest notes";
+      return;
+    }
+
+    await sleep(300);
+    statusBar.classList.remove("show");
+    statusText.textContent = FETCH_STEPS[0];
+
+    renderUpdateCards(notes);
+
+    // Update action button meta
+    setIntelActionBtn();
+
+    btn.classList.remove("fetching");
+    btnLabel.textContent = "Fetch latest notes";
+  }
+
+  // Wire "see all updates" links — switch to update tab
+  document.querySelectorAll("[data-see-all]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Switch to update tab
+      activeTab = "update";
+      document.querySelectorAll(".ag-intel-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === "update"));
+      document.querySelectorAll(".ag-intel-panel").forEach(p => p.classList.toggle("active", p.id === "tabUpdate"));
+      setIntelActionBtn();
+      // Scroll the intel block into view
+      document.querySelector(".ag-intel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  // Seed the initial salient badges on the pre-loaded cards
+  document.querySelectorAll("#agUpdateCards .ag-intel-card-salient").forEach(badge => {
+    badge.addEventListener("click", () => enterPortal(badge.dataset.client));
+  });
+
+  document.getElementById("openScrapeBtn").addEventListener("click", runAutoFetch);
+}); // DOMContentLoaded
+</script>
+</body>
+</html>
