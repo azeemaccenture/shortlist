@@ -39,7 +39,7 @@ export const PERSONA_COPY: Record<PersonaId, PersonaCopy> = {
         "Filtered to what matters at the strategic horizon. Multi-year plays and platform bets, ranked by relevance to your FY objectives.",
     },
     eyebrow: "CIO view",
-    impactTitle: "CIO impact",
+    impactTitle: "Strategic impact",
   },
   product: {
     label: "Product lead",
@@ -64,7 +64,7 @@ export const PERSONA_COPY: Record<PersonaId, PersonaCopy> = {
         "Ranked by impact on your Q3 delivery targets. API releases, partner hub changes, and subscriber experience updates most likely to need your attention.",
     },
     eyebrow: "Product lead view",
-    impactTitle: "Delivery impact",
+    impactTitle: "Measure of success",
   },
   ba: {
     label: "Analyst",
@@ -87,6 +87,6 @@ export const PERSONA_COPY: Record<PersonaId, PersonaCopy> = {
       hexworth: "Operational fixes, support tooling updates, and billing window changes your team needs to act on. Sorted by immediacy.",
     },
     eyebrow: "Analyst view",
-    impactTitle: "Ops impact",
+    impactTitle: "Jira tickets",
   },
 };

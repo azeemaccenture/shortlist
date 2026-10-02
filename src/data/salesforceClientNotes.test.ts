@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CLIENTS } from "./clients";
 import { SALESFORCE_SHIPPED } from "./salesforceReleaseNotes";
 import { salesforceNoteCount, salesforceNotesFor } from "./salesforceClientNotes";
-import { rerankFromText, visibleNotes } from "../portal/feed";
+import { leadSignal, rerankFromText, visibleNotes } from "../portal/feed";
 
 describe("salesforce client feed", () => {
   const sharedCount = SALESFORCE_SHIPPED.filter((card) => card.client === null).length;
@@ -64,6 +64,17 @@ describe("salesforce client feed", () => {
     expect(matched).toBeDefined();
     expect(shared).toBeDefined();
     expect(matched!.scores.cio).toBeGreaterThan(shared!.scores.cio);
+  });
+
+  it("shows a different impact metric for each role", () => {
+    const note = salesforceNotesFor("aether").find((item) => item.id === "aether-sf-264-agentforce-contact-center");
+    expect(note).toBeDefined();
+    expect(leadSignal(note!, "cio")).toMatchObject({ val: "+0.8", lbl: "NPS outlook" });
+    expect(leadSignal(note!, "product")).toMatchObject({ val: "Elevated", lbl: "Measure of success" });
+    expect(leadSignal(note!, "ba").lbl).toBe("Active Jira tickets");
+    expect(note!.impact.impactNote_ba).toMatch(/This fix would solve \d+ active Jira tickets/);
+    expect(note!.impact.impactNote_product).toMatch(/Elevated measure of success: Containment moves \+18%/);
+    expect(leadSignal(note!, "cio").lbl).not.toBe(leadSignal(note!, "ba").lbl);
   });
 
   it("re-ranks against uploaded requirement text", () => {
