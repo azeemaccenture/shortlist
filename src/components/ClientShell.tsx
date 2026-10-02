@@ -1,10 +1,9 @@
 import { useEffect, type ReactNode } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { ClientProfile } from "../data/clients";
+import { PERSONAS, PERSONA_COPY } from "../data/personaCopy";
+import { BriefingProvider, useBriefing } from "../portal/BriefingContext";
 import { useClient } from "../portal/useClient";
-import { RoleLogin } from "./RoleLogin";
-
-type NavItem = { to: string; label: string; end?: boolean };
 
 function AetherMark() {
   return (
@@ -17,27 +16,45 @@ function AetherMark() {
   );
 }
 
-function navClass(base: string, isActive: boolean, label: string, pathname: string) {
-  const onDetail = pathname.includes("/items/");
-  const catalogLabel = label === "Components" || label === "Content";
-  const on = isActive || (onDetail && catalogLabel);
-  return `${base}${on ? " active" : ""}`;
+function PersonaTabs({ hex }: { hex: boolean }) {
+  const { persona, setPersona } = useBriefing();
+  return (
+    <div className={hex ? "hx-persona-pills" : "ae-persona-tabs"} role="group" aria-label="Role">
+      {PERSONAS.map((id) => (
+        <button
+          key={id}
+          type="button"
+          className={`${hex ? "hx-persona-pill" : "ae-persona-tab"}${persona === id ? " active" : ""}`}
+          data-testid={`persona-${id}`}
+          aria-pressed={persona === id}
+          onClick={() => setPersona(id)}
+        >
+          {PERSONA_COPY[id].label}
+        </button>
+      ))}
+    </div>
+  );
 }
+
+function ShareButton({ className }: { className: string }) {
+  const { briefing, toggleBriefingOpen } = useBriefing();
+  return (
+    <button className={className} type="button" onClick={toggleBriefingOpen}>
+      Share briefing{briefing.length ? ` (${briefing.length})` : ""}
+    </button>
+  );
+}
+
+const AETHER_NAV = ["Releases", "Components", "Network", "Health"];
+const HEX_NAV = ["Releases", "Content", "Subscribers"];
 
 function AetherShell({ client, children }: { client: ClientProfile; children: ReactNode }) {
   const base = `/clients/${client.id}`;
-  const { pathname } = useLocation();
-  const links: NavItem[] = [
-    { to: base, label: "Releases", end: true },
-    { to: `${base}/catalog`, label: "Components" },
-    { to: `${base}/shortlist`, label: "Network" },
-    { to: `${base}/intake`, label: "Health" },
-  ];
   return (
     <div id="screen-aether" className="screen active" role="region" aria-label="Aether Dynamics client environment">
       <div className="ae-system-bar">
         <div className="ae-system-bar-in">
-          <Link className="ae-back-btn" to="/">
+          <Link className="ae-back-btn" to="/" data-testid="back-agency">
             ← Shortlist agency
           </Link>
           <span className="ae-sys-spacer" />
@@ -54,22 +71,15 @@ function AetherShell({ client, children }: { client: ClientProfile; children: Re
             </div>
           </Link>
           <nav className="ae-nav-links" aria-label="Aether">
-            {links.map((link) => (
-              <NavLink
-                key={link.label}
-                to={link.to}
-                end={link.end}
-                className={({ isActive }) => navClass("ae-nav-link", isActive, link.label, pathname)}
-              >
-                {link.label}
-              </NavLink>
+            {AETHER_NAV.map((label) => (
+              <button key={label} type="button" className={label === "Releases" ? "ae-nav-link active" : "ae-nav-link"}>
+                {label}
+              </button>
             ))}
           </nav>
           <div className="ae-nav-end">
-            <RoleLogin />
-            <Link className="ae-share-btn" to={`${base}/shortlist`} data-testid="see-top-5">
-              Share briefing
-            </Link>
+            <PersonaTabs hex={false} />
+            <ShareButton className="ae-share-btn" />
           </div>
         </div>
       </header>
@@ -83,12 +93,6 @@ function AetherShell({ client, children }: { client: ClientProfile; children: Re
 
 function HexworthShell({ client, children }: { client: ClientProfile; children: ReactNode }) {
   const base = `/clients/${client.id}`;
-  const { pathname } = useLocation();
-  const links: NavItem[] = [
-    { to: base, label: "Releases", end: true },
-    { to: `${base}/catalog`, label: "Content" },
-    { to: `${base}/shortlist`, label: "Subscribers" },
-  ];
   return (
     <div id="screen-hexworth" className="screen active" role="region" aria-label="Hexworth client environment">
       <header className="hx-nav">
@@ -97,25 +101,18 @@ function HexworthShell({ client, children }: { client: ClientProfile; children: 
             Hexworth
           </Link>
           <nav className="hx-nav-links" aria-label="Hexworth">
-            {links.map((link) => (
-              <NavLink
-                key={link.label}
-                to={link.to}
-                end={link.end}
-                className={({ isActive }) => navClass("hx-nav-link", isActive, link.label, pathname)}
-              >
-                {link.label}
-              </NavLink>
+            {HEX_NAV.map((label) => (
+              <button key={label} type="button" className={label === "Releases" ? "hx-nav-link active" : "hx-nav-link"}>
+                {label}
+              </button>
             ))}
           </nav>
           <div className="hx-nav-spacer" />
-          <RoleLogin />
-          <Link className="hx-back-link" to="/">
+          <PersonaTabs hex />
+          <Link className="hx-back-link" to="/" data-testid="back-agency">
             ← Agency
           </Link>
-          <Link className="hx-nav-cta" to={`${base}/shortlist`} data-testid="see-top-5">
-            Share briefing
-          </Link>
+          <ShareButton className="hx-nav-cta" />
         </div>
       </header>
       <main>{children}</main>
@@ -126,7 +123,7 @@ function HexworthShell({ client, children }: { client: ClientProfile; children: 
   );
 }
 
-export function ClientShell({ children }: { children: ReactNode }) {
+function ShellBody({ children }: { children: ReactNode }) {
   const client = useClient();
   const navigate = useNavigate();
 
@@ -144,4 +141,12 @@ export function ClientShell({ children }: { children: ReactNode }) {
   if (!client) return null;
   if (client.id === "hexworth") return <HexworthShell client={client}>{children}</HexworthShell>;
   return <AetherShell client={client}>{children}</AetherShell>;
+}
+
+export function ClientShell({ children }: { children: ReactNode }) {
+  return (
+    <BriefingProvider>
+      <ShellBody>{children}</ShellBody>
+    </BriefingProvider>
+  );
 }

@@ -1,12 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
-import { CatalogPage } from "./pages/CatalogPage";
-import { DetailPage } from "./pages/DetailPage";
-import { IntakePage } from "./pages/IntakePage";
 import { AgencyPage } from "./pages/AgencyPage";
 import { PortalHome } from "./pages/PortalHome";
-import { ShortlistPage } from "./pages/ShortlistPage";
-import { useSession } from "./state/SessionProvider";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -16,50 +11,27 @@ function ScrollToTop() {
   return null;
 }
 
-function RequireContext({ children }: { children: ReactNode }) {
-  const { context } = useSession();
+function ClientHome() {
   const { clientId } = useParams();
-  if (!context) return <Navigate to={clientId ? `/clients/${clientId}/intake` : "/"} replace />;
-  return children;
+  return <Navigate to={clientId ? `/clients/${clientId}` : "/"} replace />;
 }
 
 export default function App() {
   return (
     <>
       <ScrollToTop />
-    <Routes>
-      <Route path="/" element={<AgencyPage />} />
-      <Route path="/clients/:clientId" element={<PortalHome />} />
-      <Route path="/clients/:clientId/intake" element={<IntakePage />} />
-      <Route
-        path="/clients/:clientId/catalog"
-        element={
-          <RequireContext>
-            <CatalogPage />
-          </RequireContext>
-        }
-      />
-      <Route
-        path="/clients/:clientId/shortlist"
-        element={
-          <RequireContext>
-            <ShortlistPage />
-          </RequireContext>
-        }
-      />
-      <Route
-        path="/clients/:clientId/items/:id"
-        element={
-          <RequireContext>
-            <DetailPage />
-          </RequireContext>
-        }
-      />
-      <Route path="/catalog" element={<Navigate to="/" replace />} />
-      <Route path="/shortlist" element={<Navigate to="/" replace />} />
-      <Route path="/items/:id" element={<Navigate to="/" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      <Routes>
+        <Route path="/" element={<AgencyPage />} />
+        <Route path="/clients/:clientId" element={<PortalHome />} />
+        <Route path="/clients/:clientId/intake" element={<ClientHome />} />
+        <Route path="/clients/:clientId/catalog" element={<ClientHome />} />
+        <Route path="/clients/:clientId/shortlist" element={<ClientHome />} />
+        <Route path="/clients/:clientId/items/:id" element={<ClientHome />} />
+        <Route path="/catalog" element={<Navigate to="/" replace />} />
+        <Route path="/shortlist" element={<Navigate to="/" replace />} />
+        <Route path="/items/:id" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </>
   );
 }

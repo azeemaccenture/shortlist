@@ -1,203 +1,59 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { ClientShell } from "../components/ClientShell";
 import { FeedHead, RailButton, SearchField, WorkLayout } from "../components/worldUi";
-import { CATALOG } from "../data/catalog";
-import { CLIENT_PREVIEWS, type ClientId } from "../data/clients";
+import { notesFor, type PersonaId, type ReleaseNote } from "../data/clientNotes";
 import { PERSONA_COPY } from "../data/personaCopy";
-import {
-  HORIZON_LABEL,
-  RELEASE_DROP,
-  clientNotes,
-  horizonCount,
-  type Horizon,
-  type SalientChange,
-} from "../data/releaseNotes";
-import { formatScore } from "../format";
+import type { ClientId } from "../data/clients";
+import { HORIZON_TITLE, TIER_LABEL, leadSignal, noteScore, rerankFromText, visibleNotes, type HorizonFilter } from "../portal/feed";
+import { useBriefing } from "../portal/BriefingContext";
 import { useClient } from "../portal/useClient";
-import { rankTop } from "../scoring/rank";
 import { readReq, reqText } from "../state/requirements";
-import { useSession } from "../state/SessionProvider";
-import { ROLE_LABELS, type Role, type ShortlistContext } from "../types";
 
-type Filter = Horizon | "all";
-
-const TIER_TITLES: Record<Filter, string> = {
-  all: "All releases",
-  long: "Long-term",
-  quarter: "Quarter",
-  daily: "Day-to-day",
-};
-
-function scoringContext(
-  clientId: ClientId,
-  saved: ShortlistContext | null,
-  pendingRole: Role | null,
-): ShortlistContext {
-  if (saved) return saved;
-  const preview = CLIENT_PREVIEWS[clientId];
-  if (pendingRole) return { ...preview, role: pendingRole };
-  return preview;
-}
-
-/** Display order for salient notes. Catalog ranking stays in rank.ts. */
-function roleScore(note: SalientChange, role: Role): number {
-  const bias: Record<Role, Record<Horizon, number>> = {
-    cio: { long: 12, quarter: 0, daily: -18 },
-    product_lead: { long: -4, quarter: 10, daily: -6 },
-    ba: { long: -16, quarter: 2, daily: 12 },
-  };
-  return Math.max(1, Math.min(99, note.match + bias[role][note.horizon]));
-}
-
-function keywordLens(notes: SalientChange[], role: Role, text: string): Record<string, number> {
-  const words = text
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((word) => word.length > 2);
-  const scores: Record<string, number> = {};
-  for (const note of notes) {
-    const hay = `${note.headline} ${note.salient} ${note.version}`.toLowerCase();
-    const hits = words.filter((word) => hay.includes(word)).length;
-    scores[note.id] = Math.max(1, Math.min(99, roleScore(note, role) + hits * 6));
-  }
-  return scores;
-}
-
-function RelevantFeatures({ clientId }: { clientId: ClientId }) {
-  const { context, pendingRole } = useSession();
-  const lens = scoringContext(clientId, context, pendingRole);
-  const ranked = rankTop(lens, CATALOG).slice(0, 3);
-  const base = `/clients/${clientId}`;
-  return (
-    <section className="relevant-features" data-testid="relevant-features" aria-label="Most relevant features">
-      <h2>Most relevant features · {ROLE_LABELS[lens.role]}</h2>
-      <p className="relevant-note">
-        {context
-          ? "Ranked from the FY objectives and mocks saved in this session."
-          : "Preview lens until FY objectives are saved. The role login changes this ranking."}
-      </p>
-      <ol>
-        {ranked.map((row) => (
-          <li key={row.item.id}>
-            <Link to={context ? `${base}/items/${row.item.id}` : `${base}/intake`}>
-              <strong>{row.item.name}</strong>
-              <span>{formatScore(row.score)}</span>
-            </Link>
-            <p>{row.item.summary}</p>
-          </li>
-        ))}
-      </ol>
-      <Link className="fy-link" to={`${base}/intake`}>
-        Open FY brief
-      </Link>
-    </section>
-  );
-}
+const FILTERS: HorizonFilter[] = ["all", "long", "quarter", "daily"];
 
 function PortalFeed({ clientId }: { clientId: ClientId }) {
   const hex = clientId === "hexworth";
-  const { context, pendingRole } = useSession();
-  const lens = scoringContext(clientId, context, pendingRole);
-  const persona = PERSONA_COPY[lens.role];
-  const notes = clientNotes(clientId);
-  const [filter, setFilter] = useState<Filter>("all");
+  const notes = notesFor(clientId);
+  const { persona, briefing, toggleBriefing, briefingOpen } = useBriefing();
+  const copy = PERSONA_COPY[persona];
+  const [filter, setFilter] = useState<HorizonFilter>("all");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string[]>([]);
   const [clientReq, setClientReq] = useState(() => reqText(readReq(clientId)));
   const [personaReq, setPersonaReq] = useState("");
-  const [lensScores, setLensScores] = useState<Record<string, number> | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, number> | null>(null);
   const [status, setStatus] = useState("Default ranking");
 
   useEffect(() => {
-    setLensScores(null);
-    setStatus("Default ranking");
-  }, [lens.role]);
+    setOpenId(null);
+  }, [persona]);
 
-  const scoreFor = (note: SalientChange) => lensScores?.[note.id] ?? roleScore(note, lens.role);
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return notes
-      .filter((note) => (filter === "all" ? true : note.horizon === filter))
-      .filter((note) => {
-        if (!needle) return true;
-        return `${note.headline} ${note.salient} ${note.version}`.toLowerCase().includes(needle);
-      })
-      .slice()
-      .sort((left, right) => scoreFor(right) - scoreFor(left));
-    // scoreFor closes over lens role and lensScores
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, filter, query, lens.role, lensScores]);
-
-  const top = Math.max(...notes.map((note) => scoreFor(note)));
-  const counts: Record<Filter, number> = {
+  const visible = useMemo(
+    () => visibleNotes(notes, persona, filter, query, overrides),
+    [notes, persona, filter, query, overrides],
+  );
+  const top = Math.max(...notes.map((note) => noteScore(note, persona, overrides)));
+  const counts = {
     all: notes.length,
-    long: horizonCount(clientId, "long"),
-    quarter: horizonCount(clientId, "quarter"),
-    daily: horizonCount(clientId, "daily"),
+    long: notes.filter((note) => note.tier === "long").length,
+    quarter: notes.filter((note) => note.tier === "quarter").length,
+    daily: notes.filter((note) => note.tier === "daily").length,
   };
 
   function rerank() {
     const text = `${clientReq} ${personaReq}`.trim();
-    if (!text) return;
-    setLensScores(keywordLens(notes, lens.role, text));
+    const next = rerankFromText(notes, persona, text);
+    if (!next) return;
+    setOverrides(next);
     setStatus("Re-ranked");
     setOpenId(null);
   }
 
-  const noteList = (
-    <div id={hex ? "hxNoteList" : "aeNoteList"} data-testid="salient-list">
-      {visible.map((note) => {
-        const open = openId === note.id;
-        const score = scoreFor(note);
-        return (
-          <div className={hex ? "hx-note-row" : "ae-note-row"} key={note.id}>
-            <button
-              className={hex ? "hx-note-row-main" : "ae-note-row-main"}
-              type="button"
-              onClick={() => setOpenId(open ? null : note.id)}
-            >
-              <div className={hex ? `hx-tier-pill ${note.horizon}` : `ae-tier-tag ${note.horizon}`}>
-                {HORIZON_LABEL[note.horizon]}
-              </div>
-              <div>
-                <div className={hex ? "hx-note-title" : "ae-note-title"}>{note.headline}</div>
-                <div className={hex ? "hx-note-excerpt" : "ae-note-excerpt"}>{note.salient}</div>
-                <div className={hex ? "hx-note-chips" : "ae-note-chips"}>
-                  <span className={hex ? "hx-note-chip" : "ae-note-chip"}>{note.date}</span>
-                  <span className={hex ? "hx-note-chip" : "ae-note-chip"}>{note.version}</span>
-                </div>
-              </div>
-              <div className={hex ? "hx-note-score" : "ae-note-score"}>
-                <div className="n">
-                  {score}
-                  <em>%</em>
-                </div>
-                <div className="l">Match</div>
-              </div>
-            </button>
-            {open ? (
-              <div className={hex ? "hx-note-expand open" : "ae-note-expand open"}>
-                <div>
-                  <h4>Summary</h4>
-                  <p>{note.salient}</p>
-                </div>
-                <div>
-                  <h4>Release</h4>
-                  <p>
-                    {RELEASE_DROP.label} · {note.version} · mock scrape
-                  </p>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const filters: Filter[] = ["all", "long", "quarter", "daily"];
+  const briefingNotes = briefing
+    .map((id) => notes.find((note) => note.id === id))
+    .filter((note): note is ReleaseNote => Boolean(note));
 
   return (
     <div data-testid="portal-home">
@@ -205,9 +61,9 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
         <section className="hx-hero">
           <div className="hx-hero-in">
             <div>
-              <p className="hx-hero-eyebrow">Latest release focus · {persona.eyebrow}</p>
-              <h1>{persona.heroTitle}</h1>
-              <p className="hx-hero-sub">{persona.heroSub}</p>
+              <p className="hx-hero-eyebrow">Latest release focus · {copy.eyebrow}</p>
+              <h1>{copy.heroTitle[clientId]}</h1>
+              <p className="hx-hero-sub">{copy.heroSub[clientId]}</p>
             </div>
             <aside className="hx-hero-fig">
               <div className="hx-hero-big">{top}%</div>
@@ -219,8 +75,8 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
         <div className="ae-data-header">
           <div className="ae-data-header-in">
             <div className="ae-data-lead">
-              <h1>{persona.heroTitle}</h1>
-              <p>{persona.heroSub}</p>
+              <h1>{copy.heroTitle[clientId]}</h1>
+              <p>{copy.heroSub[clientId]}</p>
             </div>
             <div className="ae-kpi">
               <div className="n">{notes.length}</div>
@@ -248,12 +104,12 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
       {hex ? (
         <div className="hx-persona-bar">
           <div className="hx-persona-bar-in">
-            <PersonaFields clientId={clientId} roleLine={persona.roleLine} horizon={persona.horizon} objective={persona.objectives[clientId]} tags={persona.tags[clientId]} />
+            <PersonaFields clientId={clientId} persona={persona} />
           </div>
         </div>
       ) : (
         <div className="ae-persona-panel-in">
-          <PersonaFields clientId={clientId} roleLine={persona.roleLine} horizon={persona.horizon} objective={persona.objectives[clientId]} tags={persona.tags[clientId]} />
+          <PersonaFields clientId={clientId} persona={persona} />
         </div>
       )}
 
@@ -294,17 +150,36 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
             <span className={status === "Re-ranked" ? "rerank-status live" : "rerank-status"}>{status}</span>
           </div>
         </div>
+        {briefingOpen ? (
+          <section className={hex ? "hx-impact-panel briefing-panel" : "ae-impact-panel briefing-panel"} aria-label="Briefing">
+            <h2>Briefing</h2>
+            {briefingNotes.length === 0 ? (
+              <p>No notes in this briefing yet. Open a release and choose Add to briefing.</p>
+            ) : (
+              <ul>
+                {briefingNotes.map((note) => (
+                  <li key={note.id}>
+                    <strong>{note.title}</strong>
+                    <span>
+                      {noteScore(note, persona, overrides)}% · {copy.impactTitle}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
       </div>
 
       <WorkLayout
         label="Horizon"
         rail={
           <>
-            {filters.map((id) => (
+            {FILTERS.map((id) => (
               <RailButton
                 key={id}
                 active={filter === id}
-                label={id === "all" && hex ? "All" : TIER_TITLES[id]}
+                label={id === "all" && hex ? "All" : HORIZON_TITLE[id]}
                 count={hex ? `${counts[id]} notes` : counts[id]}
                 onClick={() => {
                   setFilter(id);
@@ -315,7 +190,7 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
           </>
         }
       >
-        <FeedHead title={TIER_TITLES[filter]}>
+        <FeedHead title={HORIZON_TITLE[filter]}>
           <SearchField
             value={query}
             placeholder="Search notes..."
@@ -328,47 +203,160 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
         {visible.length === 0 ? (
           <div className={hex ? "hx-empty show" : "ae-empty show"}>No notes match this filter.</div>
         ) : (
-          noteList
+          <div data-testid="salient-list">
+            {visible.map((note) => (
+              <NoteRow
+                key={note.id}
+                note={note}
+                persona={persona}
+                hex={hex}
+                open={openId === note.id}
+                score={noteScore(note, persona, overrides)}
+                ranked={overrides !== null}
+                pinned={pinned.includes(note.id)}
+                inBriefing={briefing.includes(note.id)}
+                onToggle={() => setOpenId(openId === note.id ? null : note.id)}
+                onPin={() =>
+                  setPinned((current) =>
+                    current.includes(note.id) ? current.filter((id) => id !== note.id) : [...current, note.id],
+                  )
+                }
+                onBriefing={() => toggleBriefing(note.id)}
+              />
+            ))}
+          </div>
         )}
-        <RelevantFeatures clientId={clientId} />
       </WorkLayout>
     </div>
   );
 }
 
-function PersonaFields({
-  clientId,
-  roleLine,
-  horizon,
-  objective,
-  tags,
+function NoteRow({
+  note,
+  persona,
+  hex,
+  open,
+  score,
+  ranked,
+  pinned,
+  inBriefing,
+  onToggle,
+  onPin,
+  onBriefing,
 }: {
-  clientId: ClientId;
-  roleLine: string;
-  horizon: string;
-  objective: string;
-  tags: string[];
+  note: ReleaseNote;
+  persona: PersonaId;
+  hex: boolean;
+  open: boolean;
+  score: number;
+  ranked: boolean;
+  pinned: boolean;
+  inBriefing: boolean;
+  onToggle: () => void;
+  onPin: () => void;
+  onBriefing: () => void;
 }) {
+  const signal = leadSignal(note, persona);
+  const impactTitle = PERSONA_COPY[persona].impactTitle;
+  const tiles = note.impact[persona];
+  const impactNote = note.impact[`impactNote_${persona}`];
+  return (
+    <div className={hex ? "hx-note-row" : "ae-note-row"}>
+      <button className={hex ? "hx-note-row-main" : "ae-note-row-main"} type="button" onClick={onToggle}>
+        <div className={hex ? `hx-tier-pill ${note.tier}` : `ae-tier-tag ${note.tier}`}>{TIER_LABEL[note.tier]}</div>
+        <div>
+          <div className={hex ? "hx-note-title" : "ae-note-title"}>{note.title}</div>
+          <div className={hex ? "hx-note-excerpt" : "ae-note-excerpt"}>{note.excerpt}</div>
+          <div className={hex ? "hx-card-signal" : "ae-card-signal"} data-testid="impact-signal">
+            <span className={`sig-val ${signal.cls}`}>{signal.val}</span>
+            <span className="sig-lbl">{signal.lbl}</span>
+          </div>
+          <div className={hex ? "hx-note-chips" : "ae-note-chips"}>
+            <span className={hex ? "hx-note-chip" : "ae-note-chip"}>{note.date}</span>
+            <span className={hex ? "hx-note-chip" : "ae-note-chip"}>{note.version}</span>
+            {note.tags.slice(0, 2).map((tag) => (
+              <span key={tag} className={hex ? "hx-note-chip" : "ae-note-chip"}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className={hex ? "hx-note-score" : "ae-note-score"}>
+          <div className="n">
+            {score}
+            <em>%</em>
+          </div>
+          <div className="l">Match</div>
+          {ranked ? <span className={hex ? "ai-badge hx-theme" : "ai-badge ae-theme"}>Ranked</span> : null}
+        </div>
+      </button>
+      {open ? (
+        <div className={hex ? "hx-note-expand open" : "ae-note-expand open"} data-testid="note-expand">
+          <div>
+            <h4>Summary</h4>
+            <p>{note.summary}</p>
+            <div className={hex ? "hx-note-expand-actions" : "ae-note-expand-actions"}>
+              <button className={hex ? "hx-btn-ghost" : "ae-btn-ghost"} type="button" aria-pressed={pinned} onClick={onPin}>
+                {pinned ? "Pinned" : "Pin"}
+              </button>
+              <button
+                className={hex ? "hx-btn-primary" : "ae-btn-primary"}
+                type="button"
+                aria-pressed={inBriefing}
+                onClick={onBriefing}
+              >
+                {inBriefing ? "In briefing" : "Add to briefing"}
+              </button>
+            </div>
+          </div>
+          <div>
+            <h4>Why it matters here</h4>
+            <ul>
+              {note.why.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+          <div className={hex ? "hx-impact-panel" : "ae-impact-panel"} data-testid="impact-panel">
+            <h4>{impactTitle}</h4>
+            <div className={hex ? "hx-impact-grid" : "ae-impact-grid"}>
+              {tiles.map((tile) => (
+                <div className={hex ? "hx-impact-tile" : "ae-impact-tile"} key={tile.lbl}>
+                  <div className={`val ${tile.cls}`}>{tile.val}</div>
+                  <div className="lbl">{tile.lbl}</div>
+                </div>
+              ))}
+            </div>
+            {impactNote ? <div className={hex ? "hx-impact-note" : "ae-impact-note"}>{impactNote}</div> : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PersonaFields({ clientId, persona }: { clientId: ClientId; persona: PersonaId }) {
+  const copy = PERSONA_COPY[persona];
   const hex = clientId === "hexworth";
   if (hex) {
     return (
       <>
         <div className="hx-pfield">
           <span className="hx-pfield-label">Viewing as</span>
-          <div className="hx-pfield-value">{roleLine}</div>
+          <div className="hx-pfield-value">{copy.roleLine}</div>
         </div>
         <div className="hx-pfield">
           <span className="hx-pfield-label">Focus horizon</span>
-          <div className="hx-pfield-value">{horizon}</div>
+          <div className="hx-pfield-value">{copy.horizon}</div>
         </div>
         <div className="hx-pfield" style={{ flex: 2 }}>
           <span className="hx-pfield-label">FY objectives</span>
-          <div className="hx-pfield-value">{objective}</div>
+          <div className="hx-pfield-value">{copy.objectives[clientId]}</div>
         </div>
         <div className="hx-pfield">
           <span className="hx-pfield-label">Matching on</span>
           <div className="hx-ptags">
-            {tags.map((tag) => (
+            {copy.tags[clientId].map((tag) => (
               <span className="hx-ptag" key={tag}>
                 {tag}
               </span>
@@ -382,20 +370,20 @@ function PersonaFields({
     <>
       <div className="ae-persona-field">
         <span className="ae-persona-field-label">Viewing as</span>
-        <div className="ae-persona-field-value">{roleLine}</div>
+        <div className="ae-persona-field-value">{copy.roleLine}</div>
       </div>
       <div className="ae-persona-field">
         <span className="ae-persona-field-label">Focus horizon</span>
-        <div className="ae-persona-field-value">{horizon}</div>
+        <div className="ae-persona-field-value">{copy.horizon}</div>
       </div>
       <div className="ae-persona-field" style={{ flex: 2 }}>
         <span className="ae-persona-field-label">FY objectives</span>
-        <div className="ae-persona-field-value">{objective}</div>
+        <div className="ae-persona-field-value">{copy.objectives[clientId]}</div>
       </div>
       <div className="ae-persona-field">
         <span className="ae-persona-field-label">Matching on</span>
         <div className="ae-persona-tags">
-          {tags.map((tag) => (
+          {copy.tags[clientId].map((tag) => (
             <span className="ae-persona-tag" key={tag}>
               {tag}
             </span>

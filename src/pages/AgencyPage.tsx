@@ -7,11 +7,10 @@ import {
   MOCK_SENTIMENT,
   MOCK_TRENDS,
   SCRAPE_SOURCES,
-  inferClient,
   type ScrapeSource,
   type UpdateCard,
 } from "../data/intelMock";
-import { RELEASE_DROP, clientNotes } from "../data/releaseNotes";
+import { notesFor } from "../data/clientNotes";
 import { clientHref } from "../portal/useClient";
 import { readReq, writeReq, type ReqDraft } from "../state/requirements";
 
@@ -30,16 +29,35 @@ const CARD_COPY: Record<ClientId, { description: string; pills: string[] }> = {
   },
 };
 
+const SEEDED_UPDATES: UpdateCard[] = [
+  {
+    id: "seed-aether-5g",
+    type: "platform",
+    date: "28 Sep 2026",
+    title: "Multi-year 5G orchestration platform",
+    description: "Unified service graph across radio, core, edge, and partner networks. Foundation for resilient growth.",
+    client: "aether",
+  },
+  {
+    id: "seed-hex-entitlements",
+    type: "product",
+    date: "29 Sep 2026",
+    title: "Streaming entitlements API v2.4",
+    description: "Flexible content-package access and entitlement-preview endpoints for content partners.",
+    client: "hexworth",
+  },
+  {
+    id: "seed-hex-hub",
+    type: "security",
+    date: "27 Sep 2026",
+    title: "Partner hub — signed payloads",
+    description: "Exponential backoff, dead-letter queue, and signed payloads for content and entitlement events.",
+    client: "hexworth",
+  },
+];
+
 function seedHeadlines(): UpdateCard[] {
-  const types: UpdateCard["type"][] = ["platform", "product", "ops", "security", "product"];
-  return RELEASE_DROP.headlines.map((item, index) => ({
-    id: item.id,
-    title: item.headline,
-    description: item.salient,
-    type: types[index % types.length],
-    date: RELEASE_DROP.label,
-    client: inferClient(`${item.headline} ${item.salient}`),
-  }));
+  return SEEDED_UPDATES;
 }
 
 export function AgencyPage() {
@@ -293,7 +311,7 @@ export function AgencyPage() {
               >
                 <div className="ag-client-card-top">
                   <h2>{CLIENTS[id].name}</h2>
-                  <div className="ag-client-badge">{clientNotes(id).length} notes</div>
+                  <div className="ag-client-badge">{notesFor(id).length} notes</div>
                 </div>
                 <p className="ag-client-desc">{copy.description}</p>
                 <div className="ag-relevance-pills">
