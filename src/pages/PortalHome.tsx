@@ -3,19 +3,26 @@ import { Navigate } from "react-router-dom";
 import { ClientShell } from "../components/ClientShell";
 import { RequirementsPanel } from "../components/RequirementsPanel";
 import { FeedHead, RailButton, SearchField, WorkLayout } from "../components/worldUi";
-import { notesFor, type PersonaId, type ReleaseNote } from "../data/clientNotes";
+import { type PersonaId, type ReleaseNote } from "../data/clientNotes";
 import { PERSONA_COPY } from "../data/personaCopy";
 import type { ClientId } from "../data/clients";
+import { SALESFORCE_RELEASE_NOTES } from "../data/salesforceReleaseNotes";
+import { salesforceNotesFor } from "../data/salesforceClientNotes";
 import { HORIZON_TITLE, TIER_LABEL, leadSignal, noteScore, rerankFromText, visibleNotes, type HorizonFilter } from "../portal/feed";
 import { useBriefing } from "../portal/BriefingContext";
 import { useClient } from "../portal/useClient";
-import { requirementText } from "../state/requirements";
+import { readSources, requirementText, subscribeRequirements } from "../state/requirements";
 
 const FILTERS: HorizonFilter[] = ["all", "long", "quarter", "daily"];
 
+function hasRequirements(clientId: ClientId, persona: PersonaId): boolean {
+  const sources = readSources(clientId, persona);
+  return Boolean(sources.document || sources.jira);
+}
+
 function PortalFeed({ clientId }: { clientId: ClientId }) {
   const hex = clientId === "hexworth";
-  const notes = notesFor(clientId);
+  const notes = useMemo(() => salesforceNotesFor(clientId), [clientId]);
   const { persona, setPersona, briefing, toggleBriefing, briefingOpen } = useBriefing();
   const copy = PERSONA_COPY[persona];
   const [filter, setFilter] = useState<HorizonFilter>("all");
@@ -23,11 +30,17 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<Record<string, number> | null>(null);
+  const [sourcesFilled, setSourcesFilled] = useState(() => hasRequirements(clientId, persona));
 
   useEffect(() => {
     setOpenId(null);
     setOverrides(rerankFromText(notes, persona, requirementText(clientId, persona)));
   }, [clientId, persona, notes]);
+
+  useEffect(() => {
+    setSourcesFilled(hasRequirements(clientId, persona));
+    return subscribeRequirements(() => setSourcesFilled(hasRequirements(clientId, persona)));
+  }, [clientId, persona]);
 
   const visible = useMemo(
     () => visibleNotes(notes, persona, filter, query, overrides),
@@ -61,8 +74,17 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
               <p className="hx-hero-sub">{copy.heroSub[clientId]}</p>
             </div>
             <aside className="hx-hero-fig">
-              <div className="hx-hero-big">{top}%</div>
-              <div className="hx-hero-fig-lbl">Top match</div>
+              {sourcesFilled ? (
+                <>
+                  <div className="hx-hero-big">{top}%</div>
+                  <div className="hx-hero-fig-lbl">Top match</div>
+                </>
+              ) : (
+                <>
+                  <div className="hx-hero-big awaiting">—</div>
+                  <div className="hx-hero-fig-lbl">Awaiting requirements</div>
+                </>
+              )}
             </aside>
           </div>
         </section>
@@ -75,14 +97,23 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
             </div>
             <div className="ae-kpi">
               <div className="n">{notes.length}</div>
-              <div className="l">Open notes</div>
+              <div className="l">Winter ’27 notes</div>
             </div>
             <div className="ae-kpi">
-              <div className="n">
-                {top}
-                <em>%</em>
-              </div>
-              <div className="l">Top match</div>
+              {sourcesFilled ? (
+                <>
+                  <div className="n">
+                    {top}
+                    <em>%</em>
+                  </div>
+                  <div className="l">Top match</div>
+                </>
+              ) : (
+                <>
+                  <div className="n awaiting">—</div>
+                  <div className="l">Awaiting requirements</div>
+                </>
+              )}
             </div>
             <div className="ae-kpi">
               <div className="n">Q3</div>
@@ -131,63 +162,123 @@ function PortalFeed({ clientId }: { clientId: ClientId }) {
         ) : null}
       </div>
 
-      <WorkLayout
-        label="Horizon"
-        rail={
-          <>
-            {FILTERS.map((id) => (
-              <RailButton
-                key={id}
-                active={filter === id}
-                label={id === "all" && hex ? "All" : HORIZON_TITLE[id]}
-                count={hex ? `${counts[id]} notes` : counts[id]}
-                onClick={() => {
-                  setFilter(id);
-                  setOpenId(null);
-                }}
-              />
-            ))}
-          </>
-        }
-      >
-        <FeedHead title={HORIZON_TITLE[filter]}>
-          <SearchField
-            value={query}
-            placeholder="Search notes..."
-            onChange={(value) => {
-              setQuery(value);
-              setOpenId(null);
-            }}
-          />
-        </FeedHead>
-        {visible.length === 0 ? (
-          <div className={hex ? "hx-empty show" : "ae-empty show"}>No notes match this filter.</div>
-        ) : (
-          <div data-testid="salient-list">
-            {visible.map((note) => (
-              <NoteRow
-                key={note.id}
-                note={note}
-                persona={persona}
-                hex={hex}
-                open={openId === note.id}
-                score={noteScore(note, persona, overrides)}
-                ranked={overrides !== null}
-                pinned={pinned.includes(note.id)}
-                inBriefing={briefing.includes(note.id)}
-                onToggle={() => setOpenId(openId === note.id ? null : note.id)}
-                onPin={() =>
-                  setPinned((current) =>
-                    current.includes(note.id) ? current.filter((id) => id !== note.id) : [...current, note.id],
-                  )
-                }
-                onBriefing={() => toggleBriefing(note.id)}
-              />
-            ))}
-          </div>
-        )}
-      </WorkLayout>
+      {sourcesFilled ? (
+        <WorkLayout
+          label="Horizon"
+          rail={
+            <>
+              {FILTERS.map((id) => (
+                <RailButton
+                  key={id}
+                  active={filter === id}
+                  label={id === "all" && hex ? "All" : HORIZON_TITLE[id]}
+                  count={hex ? `${counts[id]} notes` : counts[id]}
+                  onClick={() => {
+                    setFilter(id);
+                    setOpenId(null);
+                  }}
+                />
+              ))}
+            </>
+          }
+        >
+          <FeedHead title={HORIZON_TITLE[filter]}>
+            <SearchField
+              value={query}
+              placeholder="Search notes..."
+              onChange={(value) => {
+                setQuery(value);
+                setOpenId(null);
+              }}
+            />
+          </FeedHead>
+          {visible.length === 0 ? (
+            <div className={hex ? "hx-empty show" : "ae-empty show"}>No notes match this filter.</div>
+          ) : (
+            <div data-testid="salient-list">
+              {visible.map((note) => (
+                <NoteRow
+                  key={note.id}
+                  note={note}
+                  persona={persona}
+                  hex={hex}
+                  open={openId === note.id}
+                  score={noteScore(note, persona, overrides)}
+                  ranked={overrides !== null}
+                  pinned={pinned.includes(note.id)}
+                  inBriefing={briefing.includes(note.id)}
+                  onToggle={() => setOpenId(openId === note.id ? null : note.id)}
+                  onPin={() =>
+                    setPinned((current) =>
+                      current.includes(note.id) ? current.filter((id) => id !== note.id) : [...current, note.id],
+                    )
+                  }
+                  onBriefing={() => toggleBriefing(note.id)}
+                />
+              ))}
+            </div>
+          )}
+        </WorkLayout>
+      ) : (
+        <AwaitingRequirements
+          clientId={clientId}
+          persona={persona}
+          noteCount={notes.length}
+          hex={hex}
+        />
+      )}
     </div>
+  );
+}
+
+function AwaitingRequirements({
+  clientId,
+  persona,
+  noteCount,
+  hex,
+}: {
+  clientId: ClientId;
+  persona: PersonaId;
+  noteCount: number;
+  hex: boolean;
+}) {
+  const copy = PERSONA_COPY[persona];
+  return (
+    <section
+      className={hex ? "req-gate hx-theme" : "req-gate ae-theme"}
+      data-testid="requirements-gate"
+      aria-live="polite"
+    >
+      <div className="req-gate-eyebrow">Recommendations</div>
+      <h2 className="req-gate-title">Attach requirements to see recommendations</h2>
+      <p className="req-gate-body">
+        {noteCount} Winter ’27 features from the Salesforce release 264 notes are routed to {clientId === "aether" ? "Aether Dynamics" : "Hexworth"} on
+        the agency feed. Upload a document or connect Jira above as the <strong>{copy.label}</strong> persona, and
+        Shortlist will rank those features against what you&rsquo;ve attached.
+      </p>
+      <ul className="req-gate-steps">
+        <li>
+          <span className="req-gate-step-num">1</span>
+          <span>Attach a strategy document or roadmap, or connect your Jira board, in the panel above.</span>
+        </li>
+        <li>
+          <span className="req-gate-step-num">2</span>
+          <span>Press <em>Re-apply to ranking</em> to score the Salesforce release 264 features against it.</span>
+        </li>
+        <li>
+          <span className="req-gate-step-num">3</span>
+          <span>Open the top-ranked features to see their persona impact and add them to your briefing.</span>
+        </li>
+      </ul>
+      <a
+        className="req-gate-source"
+        href={SALESFORCE_RELEASE_NOTES.sourceUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Source · {SALESFORCE_RELEASE_NOTES.label} · release {SALESFORCE_RELEASE_NOTES.release}
+      </a>
+    </section>
   );
 }
 

@@ -705,6 +705,7 @@
     .ae-kpi { border-left: 1px solid var(--ae-line); padding-left: 16px; }
     .ae-kpi .n { font-size: 28px; font-weight: 300; color: var(--ae-g100); line-height: 1; letter-spacing: 0; }
     .ae-kpi .n em { font-style: normal; color: var(--ae-blue); font-size: 0.55em; vertical-align: super; margin-left: 2px; font-weight: 600; }
+    .ae-kpi .n.awaiting { color: var(--ae-g50); font-weight: 400; }
     .ae-kpi .l { margin-top: 6px; font-family: var(--ae-mono); font-size: 10px; font-weight: 600; color: var(--ae-g50); letter-spacing: 0.06em; }
 
     /* Aether persona context — light bordered panel */
@@ -980,6 +981,10 @@
       font-style: italic; letter-spacing: -0.04em; line-height: 0.9;
       background: linear-gradient(135deg, #fff 20%, var(--hx-gold) 55%, var(--hx-coral) 100%);
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+    }
+    .hx-hero-big.awaiting {
+      background: none; -webkit-background-clip: initial; background-clip: initial;
+      -webkit-text-fill-color: initial; color: rgba(255,255,255,0.55); font-weight: 400;
     }
     .hx-hero-fig-lbl {
       font-size: 11px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.88; margin-top: 10px;
@@ -1490,6 +1495,103 @@ ol.note-list, ul.note-list { list-style: none; margin: 0; padding: 0; }
   .ae-data-lead { grid-column: 1 / -1; }
   .hx-hero-big { font-size: 64px; }
 }
+
+/* Awaiting-requirements gate — shown in place of the ranked feed on client portals
+   when no document has been uploaded and no Jira board has been connected. */
+.req-gate {
+  margin: 24px auto 32px;
+  max-width: 1584px;
+  padding: 36px 40px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+}
+.req-gate.ae-theme {
+  max-width: 1584px;
+  margin-left: 32px;
+  margin-right: 32px;
+  background: #fff;
+  border: 1px solid #c6c6c6;
+  color: #161616;
+}
+.req-gate.hx-theme {
+  max-width: 1100px;
+  margin-left: 40px;
+  margin-right: 40px;
+  background: linear-gradient(135deg, rgba(250, 243, 227, 0.95), rgba(246, 232, 206, 0.9));
+  border: 1px solid #c9c3b8;
+  color: #2a241e;
+  font-family: "Newsreader", Georgia, serif;
+}
+.req-gate-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6f6f6f;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+}
+.req-gate.hx-theme .req-gate-eyebrow { color: #6d5a3a; }
+.req-gate-title {
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+.req-gate.hx-theme .req-gate-title { font-weight: 700; letter-spacing: -0.01em; }
+.req-gate-body {
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 72ch;
+  color: inherit;
+  opacity: 0.85;
+  margin: 0;
+}
+.req-gate-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-width: 80ch;
+}
+.req-gate-steps li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.req-gate-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #161616;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.req-gate.hx-theme .req-gate-step-num { background: #e5d8b8; color: #4a3a1f; }
+.req-gate-source {
+  margin-top: 6px;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 12px;
+  color: #0f62fe;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(15, 98, 254, 0.4);
+  align-self: flex-start;
+  padding-bottom: 1px;
+}
+.req-gate.hx-theme .req-gate-source { color: #8a5a1f; border-bottom-color: rgba(138, 90, 31, 0.4); }
+.req-gate-source:hover { opacity: 0.85; }
 
 /* Requirements panel — light source cards, shared by agency drawer and portals */
 .rp {

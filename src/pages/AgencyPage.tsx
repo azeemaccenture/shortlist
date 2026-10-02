@@ -14,7 +14,7 @@ import {
   SALESFORCE_SEED_HEADLINES,
   SALESFORCE_SHIPPED,
 } from "../data/salesforceReleaseNotes";
-import { notesFor } from "../data/clientNotes";
+import { salesforceNoteCount } from "../data/salesforceClientNotes";
 import { clientHref } from "../portal/useClient";
 
 const CLIENT_ORDER: ClientId[] = ["aether", "hexworth"];
@@ -287,7 +287,7 @@ export function AgencyPage() {
               >
                 <div className="ag-client-card-top">
                   <h2>{CLIENTS[id].name}</h2>
-                  <div className="ag-client-badge">{notesFor(id).length} notes</div>
+                  <div className="ag-client-badge">{salesforceNoteCount(id)} notes</div>
                 </div>
                 <p className="ag-client-desc">{copy.description}</p>
                 <div className="ag-relevance-pills">
