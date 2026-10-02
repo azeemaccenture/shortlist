@@ -27,13 +27,12 @@ npm run dev
 
 The app is a static Vite build. `firebase.json` sends every path to `index.html` so client routes keep working after a refresh.
 
-Git already has the demo on `cursor/shortlist-demo-38ae`. Hosting still needs your Google account, because this environment has no Firebase login.
+The repo targets the Firebase project and hosting site `shortlist-hackathon`. This environment cannot complete Google login, so the publish runs on your machine:
 
 ```bash
 npm install
 npx firebase-tools login
-npx firebase-tools use --add
 npm run deploy:hosting
 ```
 
-`firebase use --add` picks the Firebase project and writes `.firebaserc`. That file is local to the project you choose, so create the project in the Firebase console first if you do not have one yet. `deploy:hosting` builds `dist/` and publishes it. The CLI prints the hosting URL when the upload finishes.
+`deploy:hosting` builds `dist/` and publishes it. When it finishes, the app replaces the default page at `https://shortlist-hackathon.web.app` and `https://shortlist-hackathon.firebaseapp.com`.
