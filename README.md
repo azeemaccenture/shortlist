@@ -27,7 +27,7 @@ npm run dev
 
 The app is a static Vite build. `firebase.json` sends every path to `index.html` so client routes keep working after a refresh.
 
-The repo targets the Firebase project and hosting site `shortlist-hackathon`. This environment cannot complete Google login, so the publish runs on your machine:
+The Firebase project is `bmckxff-lovelace`. Hosting publishes only to the site `shortlist-hackathon`, not the other sites on that project.
 
 ```bash
 npm install
