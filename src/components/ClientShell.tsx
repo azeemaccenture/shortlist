@@ -4,6 +4,7 @@ import type { ClientProfile } from "../data/clients";
 import { PERSONAS, PERSONA_COPY } from "../data/personaCopy";
 import { BriefingProvider, useBriefing } from "../portal/BriefingContext";
 import { useClient } from "../portal/useClient";
+import { ShortlistLogo } from "./ShortlistLogo";
 
 function AetherMark() {
   return (
@@ -54,8 +55,8 @@ function AetherShell({ client, children }: { client: ClientProfile; children: Re
     <div id="screen-aether" className="screen active" role="region" aria-label="Aether Dynamics client environment">
       <div className="ae-system-bar">
         <div className="ae-system-bar-in">
-          <Link className="ae-back-btn" to="/" data-testid="back-agency">
-            ← Shortlist agency
+          <Link className="ae-back-btn" to="/" data-testid="back-agency" aria-label="Shortlist agency">
+            <ShortlistLogo />
           </Link>
           <span className="ae-sys-spacer" />
           <span className="ae-sys-meta">Network · Q3 FY26</span>
@@ -85,7 +86,7 @@ function AetherShell({ client, children }: { client: ClientProfile; children: Re
       </header>
       <main>{children}</main>
       <footer className="ae-footer">
-        <strong>Shortlist</strong> · Aether Dynamics environment · Prototype only
+        <ShortlistLogo /> · Aether Dynamics environment · Prototype only
       </footer>
     </div>
   );
@@ -109,15 +110,16 @@ function HexworthShell({ client, children }: { client: ClientProfile; children: 
           </nav>
           <div className="hx-nav-spacer" />
           <PersonaTabs hex />
-          <Link className="hx-back-link" to="/" data-testid="back-agency">
-            ← Agency
+          <Link className="hx-back-link" to="/" data-testid="back-agency" aria-label="Shortlist agency">
+            <ShortlistLogo word={false} />
+            <span>Agency</span>
           </Link>
           <ShareButton className="hx-nav-cta" />
         </div>
       </header>
       <main>{children}</main>
       <footer className="hx-footer">
-        <strong>Shortlist</strong> · Hexworth environment · Prototype only
+        <ShortlistLogo /> · Hexworth environment · Prototype only
       </footer>
     </div>
   );

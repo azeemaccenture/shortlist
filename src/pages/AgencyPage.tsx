@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ShortlistLogo } from "../components/ShortlistLogo";
 import { CLIENTS, type ClientId } from "../data/clients";
 import {
   FETCH_STEPS,
@@ -141,9 +142,9 @@ export function AgencyPage() {
     >
       <header className="ag-topbar">
         <div className="ag-topbar-in">
-          <div className="ag-wordmark">
-            <span className="dot">▦</span>Shortlist
-          </div>
+          <Link className="ag-wordmark" to="/" aria-label="Shortlist">
+            <ShortlistLogo animate />
+          </Link>
           <div className="ag-spacer" />
           <select
             className="ag-source"
@@ -409,7 +410,7 @@ export function AgencyPage() {
       </main>
 
       <footer className="ag-footer">
-        <strong>Shortlist</strong> · Prototype build · Fictional client brands · Accenture Song agency shell
+        <ShortlistLogo /> · Prototype build · Fictional client brands · Accenture Song agency shell
       </footer>
     </div>
   );
