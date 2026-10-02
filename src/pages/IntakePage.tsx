@@ -275,6 +275,7 @@ export function IntakePage() {
         rail={
           <>
             <RailButton
+              role="tab"
               active={mode === "upload"}
               label="Upload a brief"
               onClick={() => {
@@ -283,6 +284,7 @@ export function IntakePage() {
               }}
             />
             <RailButton
+              role="tab"
               active={mode === "va"}
               label="Assistant"
               onClick={() => {

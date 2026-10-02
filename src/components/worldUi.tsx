@@ -103,17 +103,26 @@ export function RailButton({
   testId,
   label,
   count,
+  role,
 }: {
   active?: boolean;
   onClick?: () => void;
   testId?: string;
   label: string;
   count?: ReactNode;
+  role?: "tab";
 }) {
   const hex = useHex();
   const className = `${hex ? "hx-rail-btn" : "ae-filter-item"}${active ? " active" : ""}`;
   return (
-    <button type="button" className={className} onClick={onClick} data-testid={testId}>
+    <button
+      type="button"
+      className={className}
+      onClick={onClick}
+      data-testid={testId}
+      role={role}
+      aria-selected={role === "tab" ? Boolean(active) : undefined}
+    >
       {label}
       {count !== undefined ? hex ? <small>{count}</small> : <span className="ae-filter-cnt">{count}</span> : null}
     </button>
